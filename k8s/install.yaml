@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kuber
+  name: kube-saver-operator
+  labels:
+    app: kube-saver-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-saver-operator
+  template:
+    metadata:
+      labels:
+        app: kube-saver-operator
+    spec:
+      serviceAccountName: kube-saver
+      containers:
+        - name: kube-saver-operator
+          image: maheshrayas/kube-saver:1.4
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: rules

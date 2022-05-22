@@ -1,0 +1,10 @@
+apiVersion: maheshrayas.com/v1
+kind: Upscaler # Identifier of the resource type.
+metadata:
+  name: upscaler-dep1
+  namespace: kuber
+spec:
+  replicas: 2
+  tags:
+    metadata.labels.app: "go-app"
+    metadata.labels.app1: "go-app1"

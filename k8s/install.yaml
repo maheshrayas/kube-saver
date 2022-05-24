@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: kuber
+  namespace: kube-saver
   name: kube-saver-operator
   labels:
     app: kube-saver-operator
@@ -18,7 +18,10 @@ spec:
       serviceAccountName: kube-saver
       containers:
         - name: kube-saver-operator
-          image: maheshrayas/kube-saver:1.4
+          image: maheshrayas/kube-saver:1.8
+          args:
+            - "--interval=60"
+            - "--debug"
           volumeMounts:
             - name: config-volume
               mountPath: /config

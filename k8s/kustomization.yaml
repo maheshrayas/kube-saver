@@ -3,10 +3,11 @@ kind: Kustomization
 resources:
   - install.yaml
   - rbac.yaml
+  - namespace.yaml
 
 configMapGenerator:
   - name: rules
-    namespace: kuber
+    namespace: kube-saver
     behavior: create
     files:
       - rules.yaml

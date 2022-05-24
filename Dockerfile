@@ -1,6 +1,18 @@
-FROM rust:latest AS builder
+FROM lukemathwalker/cargo-chef:latest-rust-1.61 AS chef
+
+WORKDIR kube
+
+FROM chef AS planner
+
+COPY src src
+COPY Cargo.toml Cargo.lock ./
+
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder 
 
 RUN update-ca-certificates
+COPY --from=planner /kube/recipe.json recipe.json
 
 # Create appuser
 ENV USER=kube
@@ -16,7 +28,7 @@ RUN adduser \
     "${USER}"
 
 
-WORKDIR /kube
+RUN cargo chef cook --release --recipe-path recipe.json 
 
 COPY src src
 COPY Cargo.toml Cargo.lock ./
@@ -40,4 +52,4 @@ COPY --from=builder /kube/target/release/kube-saver ./
 # Use an unprivileged user.
 USER kube:kube
 
-CMD ["/kube/kube-saver"]
+ENTRYPOINT ["/kube/kube-saver"]

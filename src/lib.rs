@@ -1,5 +1,5 @@
-mod deployment;
+pub mod controller;
+pub mod downscaler;
 mod util;
-
-pub use crate::deployment::*;
 pub use crate::util::*;
+pub use downscaler::*;

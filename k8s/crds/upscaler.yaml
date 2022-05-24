@@ -4,7 +4,6 @@ metadata:
   name: upscaler-dep1
   namespace: kuber
 spec:
-  replicas: 2
+  replicas: 5
   tags:
     metadata.labels.app: "go-app"
-    metadata.labels.app1: "go-app1"

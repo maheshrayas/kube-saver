@@ -10,12 +10,6 @@ metadata:
   name: kube-saver
 rules:
   - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - create
-  - apiGroups:
       - "*"
     resources:
       - "*"
@@ -23,7 +17,6 @@ rules:
       - get
       - watch
       - list
-      - delete
       - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1

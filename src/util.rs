@@ -1,13 +1,13 @@
 use chrono::{DateTime, Datelike, TimeZone, Utc};
+use chrono_tz::Tz;
+use env_logger::{Builder, Env};
 use kube::Client;
 use regex::{Captures, Regex};
+use std::io::Write;
+use std::num::ParseIntError;
 use std::process::exit;
 use std::str::FromStr;
 use tracing::*;
-
-use chrono_tz::Tz;
-use kube_runtime::controller::{Action, Context};
-use tokio::time::Duration;
 
 pub fn current_day(day: &str) -> u32 {
     match day {
@@ -21,8 +21,29 @@ pub fn current_day(day: &str) -> u32 {
         _ => exit(1),
     }
 }
+
+pub fn init_logger() {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info,kube_client=off");
+    }
+    let env = Env::default()
+        .filter("RUST_LOG")
+        .write_style("MY_LOG_STYLE");
+
+    Builder::from_env(env)
+        .format(|buf, record| {
+            let style = buf.style();
+            // style.set_bg(Color::Yellow).set_bold(true);
+
+            let timestamp = buf.timestamp();
+
+            writeln!(buf, "{}: {}", timestamp, style.value(record.args()))
+        })
+        .init();
+}
+
 //TODO: proper error handling
-pub fn is_downscale(m: Captures) -> bool {
+pub fn is_uptime(m: Captures) -> bool {
     let week_start = current_day(&m[1]);
     let week_end = current_day(&m[2]);
     let low_hour: u32 = FromStr::from_str(&m[3]).unwrap();
@@ -49,35 +70,34 @@ pub fn is_downscale(m: Captures) -> bool {
         if time_of_day > config_date_low_hour.time() && time_of_day < config_date_high_hour.time() {
             // the uptime is between the range
             // start upscaling
-            println!("In the uptime");
-            false
+            debug!("Current rules states, its a uptime for configured resources");
+            true
         } else {
             // the downtime is between the range
             // start downscaling
-            println!("In the downtime");
-            true
+            debug!("Current rules states, its a downtime for configured resources");
+            false
         }
     } else {
         // current day is not configured in the uptime
-        println!("current day is not configured in the uptime,hence downscaling");
-        true
+        debug!("current day is not configured in the uptime,hence downscaling");
+        false
     }
 }
 
-pub fn is_downscale_time(downscale_time: &str) -> Result<bool, Error> {
+pub fn validate_uptime(downscale_time: &str) -> Result<bool, Error> {
     let m = match Regex::new(
         r"^([a-zA-Z]{3})-([a-zA-Z]{3}) (\d\d):(\d\d)-(\d\d):(\d\d) (?P<tz>[a-zA-Z/_]+)$",
     ) {
         Ok(value) => match value.is_match(downscale_time) {
             true => {
                 let m = value.captures(downscale_time).unwrap();
-                Ok(is_downscale(m))
+                Ok(is_uptime(m))
             }
             false => Ok(false),
         },
         Err(e) => Err(Error::UserInputError(e.to_string())),
     };
-    println!("{:?}", m);
     m
 }
 
@@ -88,10 +108,6 @@ pub fn is_downscale_time(downscale_time: &str) -> Result<bool, Error> {
 /// # Arguments
 /// - `error`: A reference to the `kube::Error` that occurred during reconciliation.
 /// - `_context`: Unused argument. Context Data "injected" automatically by kube-rs.
-pub fn on_error(error: &Error, _context: Context<ContextData>) -> Action {
-    eprintln!("Reconciliation error:\n{:?}", error);
-    Action::requeue(Duration::from_secs(5))
-}
 
 /// All errors possible to occur during reconciliation
 #[derive(Debug, thiserror::Error)]
@@ -103,8 +119,14 @@ pub enum Error {
         source: kube::Error,
     },
     /// Error in user input or Echo resource definition, typically missing fields.
-    #[error("Invalid Echo CRD: {0}")]
+    #[error("Invalid Upscaler CRD: {0}")]
     UserInputError(String),
+    /// Error in while converting the string to int
+    #[error("Invalid Upscaler CRD: {source}")]
+    ParseError {
+        #[from]
+        source: ParseIntError,
+    },
 }
 /// Context injected with each `reconcile` and `on_error` method invocation.
 pub struct ContextData {

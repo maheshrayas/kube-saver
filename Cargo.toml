@@ -23,7 +23,6 @@ tracing-subscriber = { version = "0.3.11", features = ["json", "env-filter"] }
 yaml-rust = "0.4.5"
 jmespath =  { version = "0.3.0", features = ["sync"] }
 regex = "1.5.5"
-chrono = "0.4"
 chrono-tz = "0.6"
 async-trait = "0.1.53"
 env_logger = "0.9.0"

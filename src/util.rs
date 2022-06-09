@@ -1,6 +1,6 @@
-use chrono::{DateTime, Datelike, TimeZone, Utc};
 use chrono_tz::Tz;
 use env_logger::{Builder, Env};
+use k8s_openapi::chrono::{DateTime, Datelike, TimeZone, Utc};
 use kube::Client;
 use regex::{Captures, Regex};
 use std::io::Write;

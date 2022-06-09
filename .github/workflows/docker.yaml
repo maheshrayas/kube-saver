@@ -40,4 +40,4 @@ jobs:
             --tag $KUBE_SAVER_IMAGE_LATEST \
             --platform linux/amd64 \
             --push \
-            -f ./docker/Dockerfile .
+            -f ./Dockerfile .

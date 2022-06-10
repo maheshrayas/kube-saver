@@ -1,6 +1,6 @@
 rules:
   - id: rules-downscale-go-app
-    uptime: Mon-Sun 16:17-20:20 Australia/Sydney
+    uptime: Mon-Sun 16:17-21:20 Australia/Sydney
     jmespath: "metadata.name == 'kuber'"
     resource:
       - Namespace

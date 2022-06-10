@@ -44,7 +44,7 @@ pub async fn upscale(
                 } else {
                     ann.as_ref()
                         .unwrap()
-                        .get("original_count")
+                        .get("kubesaver.com/original_count")
                         .unwrap()
                         .parse()?
                 };

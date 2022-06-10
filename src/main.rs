@@ -5,11 +5,12 @@ use kube::{Resource, ResourceExt};
 use kube_runtime::controller::{Action, Controller};
 use kube_saver::controller::{finalizer, upscaler, Upscaler};
 use kube_saver::downscaler::processor::processor;
-use kube_saver::{init_logger, Error};
+use kube_saver::{init_logger, Error, Resources};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::error;
+use tracing::{error, info};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -50,7 +51,7 @@ async fn main() {
     let downscaler = processor(cli.interval, &cli.rules);
     tokio::select! {
         _ = controller => error!("controlled failed"),
-        _ = downscaler => error!("downscaler exited"),
+       _ = downscaler => error!("downscaler exited"),
     }
 }
 
@@ -110,21 +111,34 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
         }
         Some(namespace) => namespace,
     };
-
     // Performs action as decided by the `determine_action` function.
     return match determine_action(&upscaler) {
         UpscalerAction::Create => {
             let name = upscaler.name(); // Name of the Upscaler resource is used to name the subresources as well.
             finalizer::add(client.clone(), &name, &namespace).await?;
             // Invoke creation of a Kubernetes built-in resource named deployment with `n` Upscaler service pods.
-            upscaler::upscale(
-                client.clone(),
-                &upscaler.name(),
-                upscaler.spec.replicas,
-                &upscaler.spec.tags,
-                &namespace,
-            )
-            .await?;
+            // loop thru the scale
+            for res in &upscaler.spec.scale {
+                let f = Resources::from_str(&res.resource).unwrap();
+                match f {
+                    Resources::Deployment(_d) => {
+                        upscaler::upscale(
+                            client.clone(),
+                            &upscaler.name(),
+                            res.replicas,
+                            &res.tags,
+                            &namespace,
+                        )
+                        .await?;
+                    }
+                    Resources::StatefulSet(_s) => {
+                        todo!()
+                    }
+                    Resources::Namespace(_n) => {
+                        info!("todo scale all deployment in namespace");
+                    }
+                };
+            }
             let api: Api<Upscaler> = Api::namespaced(client, &namespace);
             // delete the upscaler resource after creation as there is no use
             api.delete(&upscaler.name(), &DeleteParams::default())

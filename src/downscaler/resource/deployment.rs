@@ -1,11 +1,8 @@
-use crate::downscaler::{JMSExpression, Res,};
+use crate::downscaler::{JMSExpression, Res};
 use crate::Error;
 use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::*;
-use kube::api::{Patch, PatchParams};
 use kube::{client::Client, Api};
-use serde_json::json;
-use tracing::info;
 
 use super::common::DeploymentMachinery;
 
@@ -39,17 +36,14 @@ impl<'a> Res for Deploy<'a> {
             if result {
                 let pat = DeploymentMachinery {
                     tobe_replicas: self.replicas,
-                    original_replicas:original_count,
+                    original_replicas: original_count,
                     name: item.metadata.name.unwrap(),
                     namespace: item.metadata.namespace.unwrap(),
-                    annotations: item.metadata.annotations
+                    annotations: item.metadata.annotations,
                 };
-                pat.deployment_machinery(c.clone(),is_uptime).await?;
+                pat.deployment_machinery(c.clone(), is_uptime).await?;
             }
         }
         Ok(())
     }
 }
-
-
-

@@ -1,4 +1,6 @@
-use crate::downscaler::resource::{deployment::Deploy, statefulset::StatefulSet,namespace::Nspace};
+use crate::downscaler::resource::{
+    deployment::Deploy, namespace::Nspace, statefulset::StatefulSet,
+};
 use crate::Error;
 use async_trait::async_trait;
 use kube::Client;
@@ -42,7 +44,7 @@ pub trait Res {
 pub enum Resources<'a> {
     Deployment(Deploy<'a>),
     StatefulSet(StatefulSet),
-    Namespace(Nspace<'a>)
+    Namespace(Nspace<'a>),
 }
 
 impl FromStr for Resources<'_> {
@@ -52,7 +54,10 @@ impl FromStr for Resources<'_> {
             "Deployment" => Ok(Resources::Deployment(Deploy::new())),
             "StatefulSet" => Ok(Resources::StatefulSet(StatefulSet)),
             "Namespace" => Ok(Resources::Namespace(Nspace::new())),
-            e => Err(Error::UserInputError(format!("Unsupported resource type {}", e))),
+            e => Err(Error::UserInputError(format!(
+                "Unsupported resource type {}",
+                e
+            ))),
         }
     }
 }

@@ -45,13 +45,11 @@ impl Rules {
                         d.downscale(client.clone(), is_uptime).await?
                     }
                     Resources::StatefulSet(s) => s.downscale(client.clone(), is_uptime).await?,
-                    Resources::Namespace(mut n) => 
-                    {
+                    Resources::Namespace(mut n) => {
                         n.expression = &e.jmespath;
                         n.replicas = e.replicas.parse::<i32>()?;
                         n.downscale(client.clone(), is_uptime).await?
                     }
-                   
                 };
             }
         }

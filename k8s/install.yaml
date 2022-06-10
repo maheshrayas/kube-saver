@@ -18,10 +18,29 @@ spec:
       serviceAccountName: kube-saver
       containers:
         - name: kube-saver-operator
-          image: maheshrayas/kube-saver:v0.0.2
+          image: maheshrayas/kube-saver:v0.0.3
           args:
             - "--interval=60"
             - "--debug"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 500Mi
+            requests:
+              cpu: "0.5"
+              memory: 100Mi
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile:
+              type: RuntimeDefault
           volumeMounts:
             - name: config-volume
               mountPath: /config

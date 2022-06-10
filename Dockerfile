@@ -1,21 +1,11 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.61 AS chef
+FROM rust:latest AS builder
 
-WORKDIR kube
-
-FROM chef AS planner
-
-COPY src src
-COPY Cargo.toml Cargo.lock ./
-
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM chef AS builder 
-
+RUN rustup target add x86_64-unknown-linux-musl
+RUN apt update && apt install -y musl-tools musl-dev
 RUN update-ca-certificates
-COPY --from=planner /kube/recipe.json recipe.json
 
 # Create appuser
-ENV USER=kube
+ENV USER=ksave
 ENV UID=10001
 
 RUN adduser \
@@ -27,29 +17,27 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
-
-RUN cargo chef cook --release --recipe-path recipe.json 
+WORKDIR /kube
 
 COPY src src
 COPY Cargo.toml Cargo.lock ./
 
-RUN cargo build --release
+RUN cargo build --target x86_64-unknown-linux-musl --release
 
 ####################################################################################################
 ## Final image
 ####################################################################################################
-FROM gcr.io/distroless/cc
+FROM scratch
 
-# Import from builder.
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
 WORKDIR /kube
 
-# Copy our build
-COPY --from=builder /kube/target/release/kube-saver ./
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# Use an unprivileged user.
-USER kube:kube
+COPY --from=builder /kube/target/x86_64-unknown-linux-musl/release/kube-saver ./
 
-ENTRYPOINT ["/kube/kube-saver"]
+USER ksave:ksave
+
+ENTRYPOINT [ "/kube/kube-saver" ]

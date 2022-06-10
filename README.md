@@ -1,5 +1,5 @@
 <h1 align="center">
-  <p align="center">Kube-depre</p>
+  <p align="center">Kube-Saver</p>
 </h1>
 <div align="center">
   <a href="ttps://github.com/maheshrayas/kube-depre/actions/workflows/ci.yaml" alt="Build"><img src="https://github.com/maheshrayas/kube-saver/actions/workflows/ci.yaml/badge.svg" /></a>

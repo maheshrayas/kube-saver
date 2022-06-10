@@ -1,6 +1,5 @@
 rules:
   - id: rules-downscale-go-app
-<<<<<<< HEAD
     uptime: Mon-Sun 16:17-16:19 Australia/Sydney
     jmespath: "metadata.name == 'go-app'"
     resource:
@@ -11,11 +10,4 @@ rules:
     jmespath: "metadata.labels.app == 'go-app'"
     resource:
       - Deployment
-=======
-    uptime: Mon-Sun 16:17-21:20 Australia/Sydney
-    jmespath: "metadata.name == 'kuber'"
-    resource:
-      - Namespace
->>>>>>> 501214a388286ad18db1d75c49dde306698f3a9e
     replicas: 0
-

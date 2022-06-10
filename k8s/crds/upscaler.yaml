@@ -1,9 +1,10 @@
-apiVersion: maheshrayas.com/v1
+apiVersion: kubesaver.com/v1
 kind: Upscaler # Identifier of the resource type.
 metadata:
   name: upscaler-dep1
-  namespace: kuber
 spec:
-  replicas: 5
-  tags:
-    metadata.labels.app: "go-app"
+  scale:
+  - resource: Deployment
+    replicas: 5
+    tags:
+      metadata.labels.app: "go-app"

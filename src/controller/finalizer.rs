@@ -17,7 +17,7 @@ pub async fn add(client: Client, name: &str, namespace: &str) -> Result<Upscaler
     let api: Api<Upscaler> = Api::namespaced(client, namespace);
     let finalizer: Value = json!({
         "metadata": {
-            "finalizers": ["upscalers.maheshrayas.com/finalizer"]
+            "finalizers": ["upscalers.kubesaver.com/finalizer"]
         }
     });
 

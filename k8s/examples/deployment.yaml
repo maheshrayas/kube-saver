@@ -7,7 +7,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: kuber
-  name: go-app-deployment
+  name: go-app-deployment-1
   labels:
     app: go-app
 spec:
@@ -25,3 +25,27 @@ spec:
           image: maheshrayas/goapp:1.0
           ports:
             - containerPort: 8090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kuber
+  name: go-app-deployment-2
+  labels:
+    app: go-app
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: go-app
+  template:
+    metadata:
+      labels:
+        app: go-app
+    spec:
+      containers:
+        - name: go-app
+          image: maheshrayas/goapp:1.0
+          ports:
+            - containerPort: 8090
+

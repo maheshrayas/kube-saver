@@ -1,0 +1,40 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: upscalers.kubesaver.com
+  namespace: default
+spec:
+  group: kubesaver.com
+  names:
+    kind: Upscaler
+    plural: upscalers
+    singular: upscaler
+    shortNames:
+      - upscaler
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                scale:
+                  items: 
+                    type: object
+                    properties:
+                      resource: 
+                        type: string
+                      replicas:
+                        type: integer
+                        format: int32
+                      tags:
+                        type: object
+                        additionalProperties:
+                          type: string
+                    required: ["tags","resource"]
+                  type: array

@@ -56,7 +56,6 @@ impl DeploymentMachinery {
                 .is_none()
             {
                 info!("downscaling {:?}", &self.name);
-                //TODO: replicacount should be configured
                 patching(
                     c.clone(),
                     &self.original_replicas,

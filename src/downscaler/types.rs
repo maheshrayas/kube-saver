@@ -1,6 +1,3 @@
-use crate::downscaler::resource::{
-    deployment::Deploy, namespace::Nspace, statefulset::StatefulSet,
-};
 use crate::Error;
 use async_trait::async_trait;
 use kube::Client;
@@ -37,23 +34,23 @@ pub trait JMSExpression {
 
 #[async_trait]
 pub trait Res {
-    async fn downscale(&self, c: Client, is_uptime: bool) -> Result<(), Error>;
+    async fn downscale(&self, c: Client) -> Result<(), Error>;
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Resources<'a> {
-    Deployment(Deploy<'a>),
-    StatefulSet(StatefulSet),
-    Namespace(Nspace<'a>),
+pub enum Resources {
+    Deployment,
+    StatefulSet,
+    Namespace,
 }
 
-impl FromStr for Resources<'_> {
+impl FromStr for Resources {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
-            "Deployment" => Ok(Resources::Deployment(Deploy::new())),
-            "StatefulSet" => Ok(Resources::StatefulSet(StatefulSet)),
-            "Namespace" => Ok(Resources::Namespace(Nspace::new())),
+            "Deployment" => Ok(Resources::Deployment),
+            "StatefulSet" => Ok(Resources::StatefulSet),
+            "Namespace" => Ok(Resources::Namespace),
             e => Err(Error::UserInputError(format!(
                 "Unsupported resource type {}",
                 e

@@ -8,7 +8,7 @@ use crate::Error;
 pub struct StatefulSet;
 #[async_trait]
 impl Res for StatefulSet {
-    async fn downscale(&self, _c: Client, _is_uptime: bool) -> Result<(), Error> {
+    async fn downscale(&self, _c: Client) -> Result<(), Error> {
         Ok(())
     }
 }

@@ -42,7 +42,6 @@ pub fn init_logger() {
         .init();
 }
 
-//TODO: proper error handling
 pub fn is_uptime(m: Captures) -> bool {
     let week_start = current_day(&m[1]);
     let week_end = current_day(&m[2]);
@@ -101,14 +100,6 @@ pub fn validate_uptime(downscale_time: &str) -> Result<bool, Error> {
     m
 }
 
-/// Actions to be taken when a reconciliation fails - for whatever reason.
-/// Prints out the error to `stderr` and requeues the resource for another reconciliation after
-/// five seconds.
-///
-/// # Arguments
-/// - `error`: A reference to the `kube::Error` that occurred during reconciliation.
-/// - `_context`: Unused argument. Context Data "injected" automatically by kube-rs.
-
 /// All errors possible to occur during reconciliation
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -130,16 +121,10 @@ pub enum Error {
 }
 /// Context injected with each `reconcile` and `on_error` method invocation.
 pub struct ContextData {
-    /// Kubernetes client to make Kubernetes API requests with. Required for K8S resource management.
     pub client: Client,
 }
 
 impl ContextData {
-    /// Constructs a new instance of ContextData.
-    ///
-    /// # Arguments:
-    /// - `client`: A Kubernetes client to make Kubernetes REST API requests with. Resources
-    /// will be created and deleted with this client.
     pub fn new(client: Client) -> Self {
         ContextData { client }
     }

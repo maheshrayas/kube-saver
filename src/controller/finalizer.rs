@@ -6,13 +6,6 @@ use tracing::info;
 
 /// Adds a finalizer record into an `Upscaler` kind of resource. If the finalizer already exists,
 /// this action has no effect.
-///
-/// # Arguments:
-/// - `client` - Kubernetes client to modify the `Upscaler` resource with.
-/// - `name` - Name of the `Upscaler` resource to modify. Existence is not verified
-/// - `namespace` - Namespace where the `Upscaler` resource with given `name` resides.
-///
-/// Note: Does not check for resource's existence for simplicity.
 pub async fn add(client: Client, name: &str, namespace: &str) -> Result<Upscaler, Error> {
     let api: Api<Upscaler> = Api::namespaced(client, namespace);
     let finalizer: Value = json!({
@@ -27,13 +20,6 @@ pub async fn add(client: Client, name: &str, namespace: &str) -> Result<Upscaler
 
 /// Removes all finalizers from an `Upscaler` resource. If there are no finalizers already, this
 /// action has no effect.
-///
-/// # Arguments:
-/// - `client` - Kubernetes client to modify the `Upscaler` resource with.
-/// - `name` - Name of the `Upscaler` resource to modify. Existence is not verified
-/// - `namespace` - Namespace where the `Upscaler` resource with given `name` resides.
-///
-/// Note: Does not check for resource's existence for simplicity.
 pub async fn delete(client: Client, name: &str, namespace: &str) -> Result<Upscaler, Error> {
     let api: Api<Upscaler> = Api::namespaced(client, namespace);
     info!(

@@ -5,7 +5,7 @@ use kube::{Resource, ResourceExt};
 use kube_runtime::controller::{Action, Controller};
 use kube_saver::controller::{finalizer, upscaler, Upscaler};
 use kube_saver::downscaler::processor::processor;
-use kube_saver::{init_logger, Error, Resources};
+use kube_saver::{init_logger, ContextData, Error, Resources};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -64,38 +64,11 @@ fn on_error(error: &Error, _context: Arc<ContextData>) -> Action {
     error!("Reconciliation error:\n{:?}", error);
     Action::requeue(Duration::from_secs(5))
 }
-//
-
-// REGEX to check downtime
-// ^([a-zA-Z]{3})-([a-zA-Z]{3}) (\d\d):(\d\d)-(\d\d):(\d\d) (?P<tz>[a-zA-Z/_]+)$
-// Mon-Fri 06:30-20:30 Europe/Berlin
-// check if the current time between the downtime
-// igore if there is annotaion is_downscaled=true
-// read all the deploy from the namespace with matching labels
-// put the annotation as is_downscaled=true
-// read the current replica and add it a annotation to that resource kube/original-replicas = count
-// downscale it to 0 or configured replicas in config-map
-// when the current time is greater than configured replicas, scale the replicas = original count and set the annotation is_downscaled = false
-
-/// Context injected with each `reconcile` and `on_error` method invocation.
-struct ContextData {
-    /// Kubernetes client to make Kubernetes API requests with. Required for K8S resource management.
-    client: Client,
-}
-
-impl ContextData {
-    pub fn new(client: Client) -> Self {
-        ContextData { client }
-    }
-}
 
 /// Action to be taken upon an `Upscaler` resource during reconciliation
 enum UpscalerAction {
-    /// Create the subresources, this includes spawning `n` pods with Upscaler service
     Create,
-    /// Delete all subresources created in the `Create` phase
     Delete,
-    /// This `Upscaler` resource is in desired state and requires no actions to be taken
     NoOp,
 }
 
@@ -121,13 +94,13 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
             for res in &upscaler.spec.scale {
                 let f = Resources::from_str(&res.resource).unwrap();
                 match f {
-                    Resources::Deployment(_d) => {
+                    Resources::Deployment => {
                         upscaler::upscale_deploy(client.clone(), res.replicas, &res.tags).await?;
                     }
-                    Resources::StatefulSet(_s) => {
+                    Resources::StatefulSet => {
                         todo!()
                     }
-                    Resources::Namespace(_n) => {
+                    Resources::Namespace => {
                         upscaler::upscale_ns(client.clone(), res.replicas, &res.tags).await?;
                     }
                 };

@@ -5,6 +5,8 @@ use std::{fs::File, str::FromStr};
 use tracing::{debug, info};
 
 use crate::downscaler::{Res, Resources, Rule, Rules};
+use crate::resource::deployment::Deploy;
+use crate::resource::namespace::Nspace;
 use crate::{is_uptime, Error};
 
 pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
@@ -13,7 +15,7 @@ pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
     let r: Rules = serde_yaml::from_reader(f).unwrap();
     let client = Client::try_default().await?;
     info!(
-        "Confgured to look for resource at the interval of {}",
+        "Confgured to look for resource at the interval of {} secs",
         interval_millis.as_secs()
     );
     loop {
@@ -36,20 +38,17 @@ impl Rules {
             // for each resource in rules.yaml
             for r in &e.resource {
                 let f = Resources::from_str(r).unwrap();
-                // Static despatch
+                info!("Processing rule {} for {}", e.id, r);
                 match f {
-                    Resources::Deployment(mut d) => {
-                        info!("Processing rule {} for {}", e.id, r);
-                        d.expression = &e.jmespath;
-                        d.replicas = e.replicas.parse::<i32>()?;
-                        d.downscale(client.clone(), is_uptime).await?
+                    Resources::Deployment => {
+                        let d = Deploy::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                        d.downscale(client.clone()).await?
                     }
-                    Resources::StatefulSet(s) => s.downscale(client.clone(), is_uptime).await?,
-                    Resources::Namespace(mut n) => {
-                        n.expression = &e.jmespath;
-                        n.replicas = e.replicas.parse::<i32>()?;
-                        n.downscale(client.clone(), is_uptime).await?
+                    Resources::Namespace => {
+                        let n = Nspace::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                        n.downscale(client.clone()).await?
                     }
+                    Resources::StatefulSet => todo!(),
                 };
             }
         }

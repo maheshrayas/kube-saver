@@ -11,12 +11,15 @@ use super::common::DeploymentMachinery;
 pub struct Nspace<'a> {
     pub(crate) expression: &'a str,
     pub(crate) replicas: i32,
+    pub(crate) is_uptime: bool,
 }
 
 impl<'a> Nspace<'a> {
-    pub fn new() -> Nspace<'a> {
+    pub fn new(expression: &'a str, replicas: i32, is_uptime: bool) -> Self {
         Nspace {
-            ..Default::default()
+            expression,
+            replicas,
+            is_uptime,
         }
     }
 }
@@ -27,7 +30,7 @@ impl JMSExpression for Namespace {}
 impl<'a> Res for Nspace<'a> {
     //TODO: logging
     //TODO: proper error handling
-    async fn downscale(&self, c: Client, is_uptime: bool) -> Result<(), Error> {
+    async fn downscale(&self, c: Client) -> Result<(), Error> {
         let api: Api<Namespace> = Api::all(c.clone());
         let namespaces = api.list(&Default::default()).await.unwrap();
         // TODO: Multiple threads
@@ -46,7 +49,7 @@ impl<'a> Res for Nspace<'a> {
                             namespace: item.metadata.namespace.unwrap(),
                             annotations: item.metadata.annotations,
                         };
-                        pat.deployment_machinery(c.clone(), is_uptime).await?;
+                        pat.deployment_machinery(c.clone(), self.is_uptime).await?;
                     }
                 }
             }

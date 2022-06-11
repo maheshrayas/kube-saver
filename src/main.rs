@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::{error, info};
+use tracing::error;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -122,20 +122,13 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
                 let f = Resources::from_str(&res.resource).unwrap();
                 match f {
                     Resources::Deployment(_d) => {
-                        upscaler::upscale(
-                            client.clone(),
-                            &upscaler.name(),
-                            res.replicas,
-                            &res.tags,
-                            &namespace,
-                        )
-                        .await?;
+                        upscaler::upscale_deploy(client.clone(), res.replicas, &res.tags).await?;
                     }
                     Resources::StatefulSet(_s) => {
                         todo!()
                     }
                     Resources::Namespace(_n) => {
-                        info!("todo scale all deployment in namespace");
+                        upscaler::upscale_ns(client.clone(), res.replicas, &res.tags).await?;
                     }
                 };
             }

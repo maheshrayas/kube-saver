@@ -1,10 +1,9 @@
 apiVersion: kubesaver.com/v1
-kind: Upscaler # Identifier of the resource type.
+kind: Upscaler
 metadata:
   name: upscaler-dep1
 spec:
   scale:
-  - resource: Deployment
-    replicas: 5
+  - resource: Namespace
     tags:
-      metadata.labels.app: "go-app"
+      metadata.name: "kuber"

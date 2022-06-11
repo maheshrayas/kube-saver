@@ -1,0 +1,47 @@
+name: codecov
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.2.0
+        with:
+          version: v0.11.0
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: deploy test resources
+        run: |
+          kubectl apply -f tests/data
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          version: '0.15.0'
+          args: '-- --test-threads 1'
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1.0.2
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v1
+        with:
+          name: code-coverage-report
+          path: cobertura.xml

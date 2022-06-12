@@ -3,6 +3,8 @@
 </h1>
 <div align="center">
   <a href="ttps://github.com/maheshrayas/kube-depre/actions/workflows/ci.yaml" alt="Build"><img src="https://github.com/maheshrayas/kube-saver/actions/workflows/ci.yaml/badge.svg" /></a>
+    <a href="https://codecov.io/gh/maheshrayas/kube-saver" alt="Lint"><img src="https://codecov.io/gh/maheshrayas/kube-saver/branch/main/graph/badge.svg?token=A44LLJERHG" /></a>
+
    </div>
 
 ## Motivation

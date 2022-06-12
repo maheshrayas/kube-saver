@@ -1,13 +1,14 @@
-use core::time;
-use kube::Client;
-use regex::Regex;
-use std::{fs::File, str::FromStr};
-use tracing::{debug, info};
-
 use crate::downscaler::{Res, Resources, Rule, Rules};
 use crate::resource::deployment::Deploy;
 use crate::resource::namespace::Nspace;
 use crate::{is_uptime, Error};
+use core::time;
+use kube::Client;
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+use regex::Regex;
+use std::{fs::File, str::FromStr};
+use tracing::{debug, error, info};
 
 pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
     let interval_millis = time::Duration::from_millis(interval * 1000);
@@ -25,7 +26,7 @@ pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
 }
 
 impl Rules {
-    async fn process_rules(&self, client: Client) -> Result<(), Error> {
+    pub async fn process_rules(&self, client: Client) -> Result<(), Error> {
         for e in &self.rules {
             info!("Processing rule {}", e.id);
             debug!(
@@ -33,7 +34,14 @@ impl Rules {
                 e.uptime, e.id
             );
             // check if the resource needs to be up
-            let is_uptime = e.validate_uptime()?;
+            let is_uptime = match e.validate_uptime() {
+                Ok(is_uptrue) => is_uptrue,
+                Err(e) => {
+                    error!("{}", e);
+                    // just return false rather than panic or non-zero exit
+                    false
+                }
+            };
             debug!("uptime for rule id {} is currently {}", e.uptime, is_uptime);
             // for each resource in rules.yaml
             for r in &e.resource {
@@ -65,7 +73,7 @@ impl Rule {
             Ok(value) => match value.is_match(&self.uptime) {
                 true => {
                     let m = value.captures(&self.uptime).unwrap();
-                    Ok(is_uptime(m))
+                    is_uptime(m)
                 }
                 false => Ok(false),
             },
@@ -73,4 +81,44 @@ impl Rule {
         };
         m
     }
+}
+
+#[test]
+fn validate_invalid_datetime_regex() {
+    let r = Rule {
+        uptime: String::from("blah"),
+        ..Default::default()
+    };
+    let uptime = r.validate_uptime();
+    assert_eq!(uptime.unwrap(), false);
+}
+
+#[test]
+fn validate_should_be_uptime_regex() {
+    let r = Rule {
+        uptime: String::from("Mon-Sun 00:00-23:59 Australia/Sydney"),
+        ..Default::default()
+    };
+    let uptime = r.validate_uptime();
+    assert_eq!(uptime.unwrap(), true);
+}
+
+#[test]
+fn validate_invalid_timezone_regex() {
+    let r = Rule {
+        uptime: String::from("Mon-Sun 00:00-23:59 India/Sydney"),
+        ..Default::default()
+    };
+    let uptime = r.validate_uptime();
+    assert_eq!(uptime.is_err(), true);
+}
+
+#[test]
+fn validate_should_be_downtime_regex() {
+    let r = Rule {
+        uptime: String::from("Mon-Sun 23:58-23:59 Australia/Sydney"),
+        ..Default::default()
+    };
+    let uptime = r.validate_uptime();
+    assert_eq!(uptime.unwrap(), false);
 }

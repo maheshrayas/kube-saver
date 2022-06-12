@@ -1,0 +1,14 @@
+rules:
+  - id: rules-downscale-kuber1
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney
+    jmespath: "metadata.name == 'kuber1'"
+    resource:
+      - Namespace
+    replicas: 0
+  - id: rules-downscale-kuber2
+    uptime: Mon-Sun 00:00-23:59 Australia/Sydney # all up
+    jmespath: "metadata.name == 'kuber2'"
+    resource:
+      - Namespace
+    replicas: 0
+

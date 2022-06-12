@@ -2,7 +2,7 @@ use chrono_tz::Tz;
 use env_logger::{Builder, Env};
 use k8s_openapi::chrono::{DateTime, Datelike, TimeZone, Utc};
 use kube::Client;
-use regex::{Captures, Regex};
+use regex::Captures;
 use std::io::Write;
 use std::num::ParseIntError;
 use std::process::exit;
@@ -42,15 +42,15 @@ pub fn init_logger() {
         .init();
 }
 
-pub fn is_uptime(m: Captures) -> bool {
+pub fn is_uptime(m: Captures) -> Result<bool, Error> {
     let week_start = current_day(&m[1]);
     let week_end = current_day(&m[2]);
     let low_hour: u32 = FromStr::from_str(&m[3]).unwrap();
     let low_min: u32 = FromStr::from_str(&m[4]).unwrap();
     let high_hour: u32 = FromStr::from_str(&m[5]).unwrap();
     let high_min: u32 = FromStr::from_str(&m[6]).unwrap();
-    let config_tz = &m["tz"];
-    let tz: Tz = config_tz.parse().unwrap();
+    let config_tz: &str = &m["tz"];
+    let tz: Tz = config_tz.parse()?;
     // get the current datetime based on the timezone
     let dt: DateTime<Tz> = Utc::now().with_timezone(&tz);
     // get the current time
@@ -70,34 +70,18 @@ pub fn is_uptime(m: Captures) -> bool {
             // the uptime is between the range
             // start upscaling
             debug!("Current rules states, its a uptime for configured resources");
-            true
+            Ok(true)
         } else {
             // the downtime is between the range
             // start downscaling
             debug!("Current rules states, its a downtime for configured resources");
-            false
+            Ok(false)
         }
     } else {
         // current day is not configured in the uptime
         debug!("current day is not configured in the uptime,hence downscaling");
-        false
+        Ok(false)
     }
-}
-
-pub fn validate_uptime(downscale_time: &str) -> Result<bool, Error> {
-    let m = match Regex::new(
-        r"^([a-zA-Z]{3})-([a-zA-Z]{3}) (\d\d):(\d\d)-(\d\d):(\d\d) (?P<tz>[a-zA-Z/_]+)$",
-    ) {
-        Ok(value) => match value.is_match(downscale_time) {
-            true => {
-                let m = value.captures(downscale_time).unwrap();
-                Ok(is_uptime(m))
-            }
-            false => Ok(false),
-        },
-        Err(e) => Err(Error::UserInputError(e.to_string())),
-    };
-    m
 }
 
 /// All errors possible to occur during reconciliation
@@ -109,8 +93,8 @@ pub enum Error {
         #[from]
         source: kube::Error,
     },
-    /// Error in user input or Echo resource definition, typically missing fields.
-    #[error("Invalid Upscaler CRD: {0}")]
+    /// Error in user input or typically missing fields.
+    #[error("Invalid User Input: {0}")]
     UserInputError(String),
     /// Error in while converting the string to int
     #[error("Invalid Upscaler CRD: {source}")]
@@ -118,6 +102,12 @@ pub enum Error {
         #[from]
         source: ParseIntError,
     },
+}
+
+impl From<String> for Error {
+    fn from(s: String) -> Self {
+        Error::UserInputError(s)
+    }
 }
 /// Context injected with each `reconcile` and `on_error` method invocation.
 pub struct ContextData {

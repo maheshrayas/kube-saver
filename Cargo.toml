@@ -28,3 +28,6 @@ async-trait = "0.1.53"
 env_logger = "0.9.0"
 clap = { version = "3.1.18", features = ["derive"] }
 openssl = { version = "0.10", features = ["vendored"] }
+
+[dev-dependencies]
+pretty_assertions = "1"

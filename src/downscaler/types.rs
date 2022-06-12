@@ -1,10 +1,12 @@
 use crate::Error;
 use async_trait::async_trait;
 use kube::Client;
+#[cfg(test)]
+use pretty_assertions::assert_eq;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub(crate) struct Rule {
     pub(crate) id: String,
     pub(crate) uptime: String,
@@ -14,7 +16,7 @@ pub(crate) struct Rule {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct Rules {
+pub struct Rules {
     pub(crate) rules: Vec<Rule>,
 }
 
@@ -57,4 +59,29 @@ impl FromStr for Resources {
             ))),
         }
     }
+}
+
+#[test]
+fn test_valid_input_resource_deployment() {
+    let res = Resources::from_str("Deployment");
+    assert_eq!(res.unwrap(), Resources::Deployment)
+}
+#[test]
+fn test_valid_input_resource_namespace() {
+    let res = Resources::from_str("Namespace");
+    assert_eq!(res.unwrap(), Resources::Namespace)
+}
+#[test]
+fn test_valid_input_resource_statefulset() {
+    let res = Resources::from_str("StatefulSet");
+    assert_eq!(res.unwrap(), Resources::StatefulSet)
+}
+
+#[test]
+fn test_invalid() {
+    let res = Resources::from_str("StatefulSet1");
+    assert_eq!(
+        res.unwrap_err().to_string(),
+        "Invalid User Input: Unsupported resource type StatefulSet1".to_string()
+    )
 }

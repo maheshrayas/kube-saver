@@ -1,0 +1,13 @@
+rules:
+  - id: rules-alwaysdown-kuber3-deployment
+    uptime: Mon-Sun 23:58-23:59 Australia/Sydney # only up between 23:58 - 23:59
+    jmespath: "metadata.name == 'test-kuber3-deploy1'"
+    resource:
+      - Deployment
+    replicas: 0
+  - id: rules-alwaysup-kuber4-deployment
+    uptime: Mon-Sun 00:00-23:59 Australia/Sydney # all up
+    jmespath: "metadata.name == 'test-kuber3-deploy2'"
+    resource:
+      - Deployment
+    replicas: 0

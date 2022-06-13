@@ -19,13 +19,73 @@
     kubectl apply -f k8s/crds/crd.yaml
     ```
 
-* Configure your rules in k8s/rules.yaml
+* Configure your rules in [rules.yaml](k8s/rules.yaml)
 
 * Install kube-saver operator
 
     ```bash
     kubectl apply -k k8s/
     ```
+
+## Examples
+
+```bash
+rules:
+  # scale down deployment with name go-app-deployment-2 when current time/day not in uptime
+  - id: rules-downscale-deployments
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    # https://jmespath.org/
+    jmespath: "metadata.name == 'go-app-deployment-2'" 
+    resource:
+      - Deployment # type of resource
+    replicas: 0 # either set the replicas:0 or any number during nonuptime 
+  # scale down all deployment in namespace kuber when current time/day not in uptime
+  - id: rules-downscale-all-deployments-in-namespace
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    # https://jmespath.org/
+    jmespath: "metadata.name == 'kuber'" 
+    resource:
+      - Namespace # type of resource
+    replicas: 0 # either set the replicas:0 or any number during nonuptime 
+
+```
+
+* Define uptime in [Olson timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) format
+
+## How can I upscale resouce during the downtime.?
+
+kube-saver will automatically upscale the resoures to orignial number of replicas when the current time falls between the `uptime` configured in rules.yaml. But if you want to manually scale up single deployment or all the deployment resources in Namespace, you have following options and it won't be scaled down until next day downtime.
+Choose any of the option below:
+
+* Configure [upscaled.yaml](./k8s/crds/upscaler.yaml) and 
+
+  ```bash 
+  kubectl apply -f ./k8s/crds/upscaler.yaml
+
+  ```
+  
+  Or
+
+* Redeploy your deployment.
+
+  Or
+
+* Edit the uptime in [rules.yaml](./k8s/rules.yaml) and redeploy the operator
+
+    ```bash
+    kubectl apply -k k8s/
+    ```
+
+## Tested
+
+| Kubernetes Provider |  Tested |
+|----------------------|--------|
+| Google Kubernetes Engine |   ✅   |
+| KIND                     |   ✅   |
+
+## WIP
+
+* Scale down and up Kubernetes Statefulsets
 
 ## Note
 

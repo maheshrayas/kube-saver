@@ -1,7 +1,17 @@
 rules:
-  - id: rules-downscale-kuber
-    uptime: Mon-Sun 16:35-16:39 Australia/Sydney
-    jmespath: "metadata.name == 'kuber'"
+  # scale down deployment with name go-app-deployment-2 when current time/day not in uptime
+  - id: rules-downscale-deployments
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    # https://jmespath.org/
+    jmespath: "metadata.name == 'go-app-deployment-2'" 
     resource:
-      - Namespace
-    replicas: 0
+      - Deployment # type of resource
+    replicas: 0 # either set the replicas:0 or any number during nonuptime 
+  # scale down all deployment in namespace kuber when current time/day not in uptime
+  - id: rules-downscale-all-deployments-in-namespace
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    # https://jmespath.org/
+    jmespath: "metadata.name == 'kuber'" 
+    resource:
+      - Namespace # type of resource
+    replicas: 0 # either set the replicas:0 or any number during nonuptime 

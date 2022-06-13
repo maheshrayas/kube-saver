@@ -1,9 +1,16 @@
 apiVersion: kubesaver.com/v1
 kind: Upscaler
 metadata:
-  name: upscaler-dep1
+  name: upscaler-all-deployments-kuber-namesapce
+  namespace: default
 spec:
   scale:
+# upscale all deployment in namespace kuber to original count which was downscaled by kube-saver 
   - resource: Namespace
     tags:
       metadata.name: "kuber"
+# upscale deployment go-app-deployment to original count which was downscaled by kube-saver 
+  - resource: Deployment
+    tags:
+      metadata.name: "go-app-deployment"
+    replicas: 100 # not a mandatory, if not defined, the number of replicas will be original count

@@ -101,7 +101,7 @@ impl DeploymentMachinery {
                     // this is needed becoz the next day I want to downscale after the end time
                     patching(
                         c.clone(),
-                        &self.original_replicas,
+                        &scale_up.to_string(), // after scaleup, keep the kubesaver.com/original_count as the real non-zero count.
                         scale_up,
                         &self.name,
                         &self.namespace,

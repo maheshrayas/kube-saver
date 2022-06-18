@@ -1,11 +1,9 @@
 use crate::downscaler::{JMSExpression, Res};
-use crate::Error;
+use crate::{Error, ResourceExtension};
 use async_trait::async_trait;
-use k8s_openapi::api::apps::v1::Deployment;
+use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
 use k8s_openapi::api::core::v1::Namespace;
 use kube::{client::Client, Api};
-
-use super::common::DeploymentMachinery;
 
 #[derive(Debug, PartialEq, Default)]
 pub struct Nspace<'a> {
@@ -24,8 +22,6 @@ impl<'a> Nspace<'a> {
     }
 }
 
-impl JMSExpression for Namespace {}
-
 #[async_trait]
 impl<'a> Res for Nspace<'a> {
     //TODO: logging
@@ -37,21 +33,17 @@ impl<'a> Res for Nspace<'a> {
         for ns in namespaces.items {
             let result = ns.parse(self.expression).await?;
             if result {
-                let api: Api<Deployment> = Api::namespaced(c.clone(), &ns.metadata.name.unwrap());
-                let list = api.list(&Default::default()).await.unwrap();
-                for item in list.items {
-                    let original_count = (item.spec.unwrap().replicas.unwrap()).to_string();
-                    if result {
-                        let pat = DeploymentMachinery {
-                            tobe_replicas: self.replicas,
-                            original_replicas: original_count,
-                            name: item.metadata.name.unwrap(),
-                            namespace: item.metadata.namespace.unwrap(),
-                            annotations: item.metadata.annotations,
-                        };
-                        pat.deployment_machinery(c.clone(), self.is_uptime).await?;
-                    }
-                }
+                let d_api: Api<Deployment> =
+                    Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
+                d_api
+                    .processor_scaler_resource_items(self.replicas, c.clone(), self.is_uptime)
+                    .await?;
+
+                let ss_api: Api<StatefulSet> =
+                    Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
+                ss_api
+                    .processor_scaler_resource_items(self.replicas, c.clone(), self.is_uptime)
+                    .await?;
             }
         }
         Ok(())

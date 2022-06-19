@@ -144,7 +144,7 @@ impl ResourceExtension for Api<StatefulSet> {
                 name: item.metadata.name.unwrap(),
                 namespace: item.metadata.namespace.unwrap(),
                 annotations: item.metadata.annotations,
-                resource_type: Resources::Deployment,
+                resource_type: Resources::StatefulSet,
             };
             pat.scaling_machinery(c.clone(), is_uptime).await?;
         }

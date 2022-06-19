@@ -34,7 +34,7 @@ impl Res for StateSet<'_> {
             let original_count = (item.spec.unwrap().replicas.unwrap()).to_string();
             if result {
                 let pat = ScalingMachinery {
-                    tobe_replicas: __self.replicas,
+                    tobe_replicas: self.replicas,
                     original_replicas: original_count,
                     name: item.metadata.name.unwrap(),
                     namespace: item.metadata.namespace.unwrap(),

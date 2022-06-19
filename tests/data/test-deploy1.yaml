@@ -26,6 +26,44 @@ spec:
           ports:
             - containerPort: 8090
 ---
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  namespace: kuber1
+  name: test-kuber1-ss1
+spec:
+  selector:
+    matchLabels:
+      app:
+        nginx # Label selector that determines which Pods belong to the StatefulSet
+        # Must match spec: template: metadata: labels
+  serviceName: "nginx"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx # Pod template's label selector
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: nginx
+          image: k8s.gcr.io/nginx-slim:0.8
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - name: www
+              mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+    - metadata:
+        name: www
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -53,4 +91,38 @@ spec:
           image: maheshrayas/goapp:1.0
           ports:
             - containerPort: 8090
-
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: kuber2
+  name: test-kuber2-ss2
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  serviceName: "nginx"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: nginx
+          image: k8s.gcr.io/nginx-slim:0.8
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - name: www
+              mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+    - metadata:
+        name: www
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

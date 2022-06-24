@@ -1,0 +1,8 @@
+rules:
+  # all deployments and statefulset must be down
+  - id: rules-downscale-kuber6
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney
+    jmespath: "metadata.name == 'test-kuber6-ss2'"
+    resource:
+      - StatefulSet
+    replicas: 0

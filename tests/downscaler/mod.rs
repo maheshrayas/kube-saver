@@ -1,1 +1,2 @@
 mod processor;
+mod upscaler;

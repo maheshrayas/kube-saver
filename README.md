@@ -9,7 +9,7 @@
 
 ## Motivation
 
-* Scale down cluster nodes by scaling down deployments during non-business hours and save $$, but if you need to scale back the resources eventhough its a scaledown, don't worry. You will have a Custom Resource which will scale up all resources and wont scale down until next scaledown period.
+* Scale down cluster nodes by scaling down Deployments, StatefulSet during non-business hours and save $$, but if you need to scale back the resources eventhough its a scaledown, don't worry. You will have a Custom Resource which will scale up all resources and wont scale down until next scaledown period.
 
 ## Installation
 
@@ -54,7 +54,7 @@ rules:
 
 ## How can I upscale resouce during the downtime.?
 
-kube-saver will automatically upscale the resoures to orignial number of replicas when the current time falls between the `uptime` configured in rules.yaml. But if you want to manually scale up single deployment or all the deployment resources in Namespace, you have following options and it won't be scaled down until next day downtime.
+kube-saver will automatically upscale the resoures to orignial number of replicas when the current time falls between the `uptime` configured in rules.yaml. But if you want to manually scale up single deployment/statefulset or all the deployment & stateulset resources in Namespace, you have following options and it won't be scaled down until next day downtime.
 Choose any of the option below:
 
 * Configure [upscaled.yaml](./k8s/crds/upscaler.yaml) and 
@@ -83,9 +83,7 @@ Choose any of the option below:
 | Google Kubernetes Engine |   ✅   |
 | KIND                     |   ✅   |
 
-## WIP
 
-* Scale down and up Kubernetes Statefulsets
 
 ## Note
 

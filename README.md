@@ -39,13 +39,21 @@ rules:
     resource:
       - Deployment # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime 
-  # scale down all deployment in namespace kuber when current time/day not in uptime
+  # scale down all deployment & Statefulset in namespace kuber when current time/day not in uptime
   - id: rules-downscale-all-deployments-in-namespace
     uptime: Mon-Fri 09:00-17:00 Australia/Sydney
     # https://jmespath.org/
     jmespath: "metadata.name == 'kuber'" 
     resource:
       - Namespace # type of resource
+    replicas: 0 # either set the replicas:0 or any number during nonuptime 
+  # scale down all statefulset in namespace kuber when current time/day not in uptime
+  - id: rules-downscale-all-deployments-in-namespace
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    # https://jmespath.org/
+    jmespath: "metadata.name == 'statefulset_name'" 
+    resource:
+      - StatefulSet # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime 
 
 ```

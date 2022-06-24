@@ -60,3 +60,34 @@ async fn test2_statefulset() {
     let d = api.get("test-kuber3-ss2").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(1));
 }
+
+#[tokio::test]
+async fn test2_scaledown_scaledupresource() {
+    let f = File::open("tests/rules/rules7.yaml").unwrap();
+    let r: Rules = serde_yaml::from_reader(f).unwrap();
+    let client = Client::try_default()
+        .await
+        .expect("Failed to read kubeconfig");
+    r.process_rules(client.clone()).await;
+    // kube-saver must scale down to 0
+    let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber7");
+    let d = api.get("test-kuber7-deploy1").await.unwrap();
+    assert_eq!(d.spec.unwrap().replicas, Some(0));
+}
+
+#[tokio::test]
+async fn test2_scaleup_scaleddownresource() {
+    let f = File::open("tests/rules/rules8.yaml").unwrap();
+    let r: Rules = serde_yaml::from_reader(f).unwrap();
+    let client = Client::try_default()
+        .await
+        .expect("Failed to read kubeconfig");
+    let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber8");
+    let d = api.get("test-kuber8-deploy1").await.unwrap();
+    //initially should be zero
+    assert_eq!(d.spec.unwrap().replicas, Some(0));
+    r.process_rules(client.clone()).await;
+    // kube-saver must scale down to 0
+    let d = api.get("test-kuber8-deploy1").await.unwrap();
+    assert_eq!(d.spec.unwrap().replicas, Some(2));
+}

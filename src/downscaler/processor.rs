@@ -11,6 +11,7 @@ use regex::Regex;
 use std::{fs::File, str::FromStr};
 use tracing::{debug, error, info};
 
+#[cfg(not(tarpaulin_include))]
 pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
     let interval_millis = time::Duration::from_millis(interval * 1000);
     let f = File::open(rules).unwrap();

@@ -1,0 +1,7 @@
+rules:
+  - id: rules-scaledown-kuber7-deployment
+    uptime: Mon-Sun 23:58-23:59 Australia/Sydney # only up between 23:58 - 23:59
+    jmespath: "metadata.name == 'test-kuber7-deploy1'"
+    resource:
+      - deployment
+    replicas: 0

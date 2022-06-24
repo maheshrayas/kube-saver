@@ -42,6 +42,7 @@ impl Rules {
                     false
                 }
             };
+
             debug!("uptime for rule id {} is currently {}", e.uptime, is_uptime);
             // for each resource in rules.yaml
             for r in &e.resource {

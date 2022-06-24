@@ -1,6 +1,7 @@
 use crate::downscaler::{Res, Resources, Rule, Rules};
 use crate::resource::deployment::Deploy;
 use crate::resource::namespace::Nspace;
+use crate::resource::statefulset::StateSet;
 use crate::{is_uptime, Error};
 use core::time;
 use kube::Client;
@@ -28,7 +29,6 @@ pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
 impl Rules {
     pub async fn process_rules(&self, client: Client) -> Result<(), Error> {
         for e in &self.rules {
-            info!("Processing rule {}", e.id);
             debug!(
                 "Checking if the current timestamp is in the uptime slot {} for the rule id {}",
                 e.uptime, e.id
@@ -45,19 +45,34 @@ impl Rules {
             debug!("uptime for rule id {} is currently {}", e.uptime, is_uptime);
             // for each resource in rules.yaml
             for r in &e.resource {
-                let f = Resources::from_str(r).unwrap();
-                info!("Processing rule {} for {}", e.id, r);
-                match f {
-                    Resources::Deployment => {
-                        let d = Deploy::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
-                        d.downscale(client.clone()).await?
+                let f = match Resources::from_str(r) {
+                    Ok(r) => Some(r),
+                    Err(err) => {
+                        // Supported Resource only Deployment, StatefulSet, Namespace
+                        error!("{err}");
+                        // if any one Resource is invalid, dont exit nonzero rather Return None and continue for next rule
+                        None
                     }
-                    Resources::Namespace => {
-                        let n = Nspace::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
-                        n.downscale(client.clone()).await?
-                    }
-                    Resources::StatefulSet => todo!(),
                 };
+
+                if f.is_some() {
+                    info!("Processing rule {} for {}", e.id, r);
+                    match f.unwrap() {
+                        Resources::Deployment => {
+                            let d = Deploy::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                            d.downscale(client.clone()).await?
+                        }
+                        Resources::Namespace => {
+                            let n = Nspace::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                            n.downscale(client.clone()).await?
+                        }
+                        Resources::StatefulSet => {
+                            let s =
+                                StateSet::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                            s.downscale(client.clone()).await?
+                        }
+                    };
+                }
             }
         }
         Ok(())

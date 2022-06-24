@@ -1,13 +1,13 @@
+use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::JMSExpression;
-use crate::Error;
-use k8s_openapi::api::apps::v1::Deployment;
+use crate::{Error, ResourceExtension, Resources};
+use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
 use k8s_openapi::api::core::v1::Namespace;
-use kube::api::{Patch, PatchParams};
 use kube::{Api, Client};
-use serde_json::json;
 use std::collections::BTreeMap;
-use tracing::{debug, info};
+use tracing::debug;
 
+/// Upscale the deploy Resource when CustomResource Upscaler is applied to cluster
 pub async fn upscale_deploy(
     client: Client,
     replicas: Option<i32>,
@@ -15,35 +15,64 @@ pub async fn upscale_deploy(
 ) -> Result<(), Error> {
     let api: Api<Deployment> = Api::all(client.clone());
     let list = api.list(&Default::default()).await?;
+    // parses the tag map object
     for (key, value) in tags {
         let exp = format!(r#"{}=='{}'"#, key, value);
         debug!("parsing jmes exp {}", exp);
         for item in &list.items {
             debug!("parsing deployment resource {:?}", item.metadata.name);
+            // for the list of all deployment, check if the tag values matches with the specific deployment
+            // For example: metadata.labels.app = nginx is matching with the deployment manifest
+            // Invoke the trait JMSExpression default parse method. Deployment implements trait JMSExpression
             let result = item.parse(&exp).await?;
-            // before upscaling always crosscheck if the resource is downscaled by kube-saver
-            let is_annotated = item
-                .metadata
-                .annotations
-                .as_ref()
-                .unwrap()
-                .get("kubesaver.com/is_downscaled");
-            if result && is_annotated.is_some() {
-                let upscale_replicas =
-                    get_replicas(replicas, item.metadata.annotations.to_owned()).await;
-                patch_up_deployment(
-                    client.clone(),
-                    upscale_replicas,
-                    item.metadata.name.as_ref().unwrap(),
-                    item.metadata.namespace.as_ref().unwrap(),
-                )
-                .await?
+            if result {
+                let u = UpscaleMachinery {
+                    replicas,
+                    name: item.metadata.name.as_ref().unwrap().to_string(),
+                    namespace: item.metadata.namespace.as_ref().unwrap().to_string(),
+                    annotations: item.metadata.annotations.to_owned(),
+                    resource_type: Resources::Deployment,
+                };
+                u.upscale_machinery(client.clone()).await?
             }
         }
     }
     Ok(())
 }
 
+/// Upscale the Statefulset Resource when CustomResource Upscaler is applied to cluster
+pub async fn upscale_statefulset(
+    client: Client,
+    replicas: Option<i32>,
+    tags: &BTreeMap<String, String>,
+) -> Result<(), Error> {
+    let api: Api<StatefulSet> = Api::all(client.clone());
+    let list = api.list(&Default::default()).await?;
+    for (key, value) in tags {
+        let exp = format!(r#"{}=='{}'"#, key, value);
+        debug!("parsing jmes exp {}", exp);
+        for item in &list.items {
+            debug!("parsing statefulset resource {:?}", item.metadata.name);
+            // for the list of all deployment, check if the tag values matches with the specific statefulset
+            // For example: metadata.labels.app = nginx is matching with the statefulset manifest
+            // Invoke the trait JMSExpression default parse method. Statefulset implements trait JMSExpression
+            let result = item.parse(&exp).await?;
+            if result {
+                let u = UpscaleMachinery {
+                    replicas,
+                    name: item.metadata.name.as_ref().unwrap().to_string(),
+                    namespace: item.metadata.namespace.as_ref().unwrap().to_string(),
+                    annotations: item.metadata.annotations.to_owned(),
+                    resource_type: Resources::StatefulSet,
+                };
+                u.upscale_machinery(client.clone()).await?
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Upscale the Both Deployment & Statefulset Resource in the defined Namepace that matches the expression defined in the `tag` of CR Upscaler resource
 pub async fn upscale_ns(
     client: Client,
     replicas: Option<i32>,
@@ -55,77 +84,26 @@ pub async fn upscale_ns(
         let exp = format!(r#"{}=='{}'"#, key, value);
         debug!("parsing jmes exp {}", exp);
         for ns in &namespaces.items {
+            // for the list of all Namespace, check if the tag values matches with the specific namespace
+            // For example: metadata.name = backend is matching with the Namespace manifest
+            // Invoke the trait JMSExpression default parse method. Namespace implements trait JMSExpression
             let result = ns.parse(&exp).await?;
             if result {
                 // upscale deployment
-                let api: Api<Deployment> =
+                let dd_api: Api<Deployment> =
                     Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
-                let deploy_list = api.list(&Default::default()).await.unwrap();
-                for deploy in &deploy_list.items {
-                    debug!("parsing deployment resource {:?}", deploy.metadata.name);
-                    // before upscaling always crosscheck if the resource is downscaled by kube-saver
-                    let is_annotated = deploy
-                        .metadata
-                        .annotations
-                        .as_ref()
-                        .unwrap()
-                        .get("kubesaver.com/is_downscaled");
-                    if is_annotated.is_some() {
-                        let upscale_replicas =
-                            get_replicas(replicas, deploy.metadata.annotations.to_owned()).await;
-                        patch_up_deployment(
-                            client.clone(),
-                            upscale_replicas,
-                            deploy.metadata.name.as_ref().unwrap(),
-                            deploy.metadata.namespace.as_ref().unwrap(),
-                        )
-                        .await?
-                    }
-                }
-                //TODO statefulset
+                dd_api
+                    .controller_upscale_resource_items(replicas, client.clone())
+                    .await?;
+
+                //upscale statefulset
+                let ss_api: Api<StatefulSet> =
+                    Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
+                ss_api
+                    .controller_upscale_resource_items(replicas, client.clone())
+                    .await?;
             }
         }
     }
     Ok(())
-}
-
-async fn patch_up_deployment(
-    client: Client,
-    replicas: i32,
-    name: &str,
-    namespace: &str,
-) -> Result<(), Error> {
-    info!(
-        "scaling up deployment {} in namespace {} to {}",
-        name, namespace, replicas
-    );
-    let patch = json!({
-        "spec": {
-            "replicas": replicas
-        }
-    });
-    let patch_params = PatchParams::default();
-    let path_api: Api<Deployment> = Api::namespaced(client, namespace);
-    let _z = path_api
-        .patch(name, &patch_params, &Patch::Merge(&patch))
-        .await?;
-    Ok(())
-}
-
-async fn get_replicas(
-    configured_replicas: Option<i32>,
-    annotated_replicas: Option<BTreeMap<String, String>>,
-) -> i32 {
-    let re = if let Some(replicas) = configured_replicas {
-        replicas
-    } else if let Some(replicas) = annotated_replicas
-        .as_ref()
-        .unwrap()
-        .get("kubesaver.com/original_count")
-    {
-        replicas.parse().unwrap()
-    } else {
-        0
-    };
-    re
 }

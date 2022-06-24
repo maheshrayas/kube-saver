@@ -1,51 +1,24 @@
-use crate::Error;
+use crate::{Error, ResourceExtension, Resources};
 use k8s_openapi::api::apps::v1::*;
-use kube::api::{Patch, PatchParams};
 use kube::{client::Client, Api};
 use serde_json::json;
 use std::collections::BTreeMap;
 use tracing::info;
 
-pub struct DeploymentMachinery {
+pub struct ScalingMachinery {
     pub(crate) tobe_replicas: i32,
     pub(crate) original_replicas: String,
     pub(crate) name: String,
     pub(crate) namespace: String,
     pub(crate) annotations: Option<BTreeMap<String, String>>,
+    pub(crate) resource_type: Resources,
 }
 
 //TODO: Struct method
 //TODO: use the same method in crd and looper
-async fn patching(
-    client: Client,
-    orig_count: &str,
-    replicas: i32,
-    name: &str,
-    namespace: &str,
-    is_downscale: &str,
-) -> Result<(), kube::Error> {
-    let patch = json!({
-        "metadata": {
-            "annotations": {
-                "kubesaver.com/is_downscaled": is_downscale,
-                "kubesaver.com/original_count": orig_count
-            },
-        },
-        "spec": {
-            "replicas": replicas
-        }
-    });
-    let patch_params = PatchParams::default();
-    let path_api: Api<Deployment> = Api::namespaced(client.clone(), namespace);
-    path_api
-        .patch(name, &patch_params, &Patch::Merge(&patch))
-        .await
-        .unwrap();
-    Ok(())
-}
 
-impl DeploymentMachinery {
-    pub async fn deployment_machinery(&self, c: Client, is_uptime: bool) -> Result<(), Error> {
+impl ScalingMachinery {
+    pub async fn scaling_machinery(&self, c: Client, is_uptime: bool) -> Result<(), Error> {
         if !is_uptime {
             // first time action
             if self
@@ -55,13 +28,11 @@ impl DeploymentMachinery {
                 .get("kubesaver.com/is_downscaled")
                 .is_none()
             {
-                info!("downscaling {:?}", &self.name);
-                patching(
+                info!("downscaling {} {}", &self.resource_type, &self.name,);
+                self.patching(
                     c.clone(),
                     &self.original_replicas,
                     self.tobe_replicas,
-                    &self.name,
-                    &self.namespace,
                     "true",
                 )
                 .await?;
@@ -73,13 +44,11 @@ impl DeploymentMachinery {
             {
                 // if the resources are already upscaled by the kube-saver and now its the time to be downscaled
                 if x == "false" {
-                    info!("downscaling {:?}", &self.name);
-                    patching(
+                    info!("downscaling {} {}", &self.resource_type, &self.name);
+                    self.patching(
                         c.clone(),
                         &self.original_replicas,
                         self.tobe_replicas,
-                        &self.name,
-                        &self.namespace,
                         "true",
                     )
                     .await?;
@@ -97,14 +66,12 @@ impl DeploymentMachinery {
                     .parse()
                     .unwrap();
                 if x == "true" {
-                    info!("Upscaling {:?}", &self.name);
+                    info!("upscaling {} ", &self.name);
                     // this is needed becoz the next day I want to downscale after the end time
-                    patching(
+                    self.patching(
                         c.clone(),
                         &scale_up.to_string(), // after scaleup, keep the kubesaver.com/original_count as the real non-zero count.
                         scale_up,
-                        &self.name,
-                        &self.namespace,
                         "false",
                     )
                     .await?;
@@ -112,5 +79,38 @@ impl DeploymentMachinery {
             }
         }
         Ok(())
+    }
+
+    async fn patching(
+        &self,
+        client: Client,
+        orig_count: &str,
+        replicas: i32,
+        is_downscale: &str,
+    ) -> Result<(), Error> {
+        let patch = json!({
+            "metadata": {
+                "annotations": {
+                    "kubesaver.com/is_downscaled": is_downscale,
+                    "kubesaver.com/original_count": orig_count
+                },
+            },
+            "spec": {
+                "replicas": replicas
+            }
+        });
+
+        let rs: Box<dyn ResourceExtension + Send + Sync> = match &self.resource_type {
+            Resources::Deployment => Box::new(Api::<Deployment>::namespaced(
+                client.clone(),
+                &self.namespace,
+            )),
+            Resources::StatefulSet => Box::new(Api::<StatefulSet>::namespaced(
+                client.clone(),
+                &self.namespace,
+            )),
+            Resources::Namespace => todo!(),
+        };
+        rs.patch_resource(&self.name, &patch).await
     }
 }

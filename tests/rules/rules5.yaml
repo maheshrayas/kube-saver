@@ -1,0 +1,13 @@
+rules:
+  - id: rules-alwaysdown-kuber3-statfulset
+    uptime: Mon-Sun 23:58-23:59 Australia/Sydney # only up between 23:58 - 23:59
+    jmespath: "metadata.name == 'test-kuber3-ss1'"
+    resource:
+      - StatefulSet
+    replicas: 0
+  - id: rules-alwaysup-kuber3-statfulset
+    uptime: Mon-Sun 00:00-23:59 Australia/Sydney # all up
+    jmespath: "metadata.name == 'test-kuber3-ss2'"
+    resource:
+      - StatefulSet
+    replicas: 0

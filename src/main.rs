@@ -26,6 +26,7 @@ struct KubeSaver {
     debug: usize,
 }
 
+#[cfg(not(tarpaulin_include))]
 #[tokio::main]
 async fn main() {
     init_logger();
@@ -60,6 +61,7 @@ enum Value {
     String,
 }
 
+#[cfg(not(tarpaulin_include))]
 fn on_error(error: &Error, _context: Arc<ContextData>) -> Action {
     error!("Reconciliation error:\n{:?}", error);
     Action::requeue(Duration::from_secs(5))
@@ -72,6 +74,7 @@ enum UpscalerAction {
     NoOp,
 }
 
+#[cfg(not(tarpaulin_include))]
 async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result<Action, Error> {
     let client: Client = context.client.clone();
     let namespace: String = match upscaler.namespace() {
@@ -124,6 +127,7 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
 
 /// # Arguments
 /// - `Upscaler`: A reference to `Upscaler` being reconciled to decide next action upon.
+#[cfg(not(tarpaulin_include))]
 fn determine_action(upscaler: &Upscaler) -> UpscalerAction {
     return if upscaler.meta().deletion_timestamp.is_some() {
         UpscalerAction::Delete

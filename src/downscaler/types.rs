@@ -182,10 +182,10 @@ pub enum Resources {
 impl FromStr for Resources {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        match input {
-            "Deployment" => Ok(Resources::Deployment),
-            "StatefulSet" => Ok(Resources::StatefulSet),
-            "Namespace" => Ok(Resources::Namespace),
+        match input.to_lowercase().as_str() {
+            "deployments" | "deployment" => Ok(Resources::Deployment),
+            "statefulset"| "statefulsets" => Ok(Resources::StatefulSet),
+            "namespace" | "namespaces" => Ok(Resources::Namespace),
             e => Err(Error::UserInputError(format!(
                 "Unsupported resource type {}, Currently supports only Deployment, StatefulSet, Namespace (Case Sensitive)",
                 e
@@ -206,18 +206,69 @@ impl std::fmt::Display for Resources {
 
 #[test]
 fn test_valid_input_resource_deployment() {
-    let res = Resources::from_str("Deployment");
-    assert_eq!(res.unwrap(), Resources::Deployment)
+    assert_eq!(
+        Resources::from_str("Deployment").unwrap(),
+        Resources::Deployment
+    );
+    assert_eq!(
+        Resources::from_str("deployment").unwrap(),
+        Resources::Deployment
+    );
+    assert_eq!(
+        Resources::from_str("deployments").unwrap(),
+        Resources::Deployment
+    );
+    assert_eq!(
+        Resources::from_str("Deployments").unwrap(),
+        Resources::Deployment
+    )
 }
+
 #[test]
 fn test_valid_input_resource_namespace() {
-    let res = Resources::from_str("Namespace");
-    assert_eq!(res.unwrap(), Resources::Namespace)
+    assert_eq!(
+        Resources::from_str("Namespace").unwrap(),
+        Resources::Namespace
+    );
+    assert_eq!(
+        Resources::from_str("Namespaces").unwrap(),
+        Resources::Namespace
+    );
+    assert_eq!(
+        Resources::from_str("namespace").unwrap(),
+        Resources::Namespace
+    );
+    assert_eq!(
+        Resources::from_str("namespaces").unwrap(),
+        Resources::Namespace
+    );
 }
 #[test]
 fn test_valid_input_resource_statefulset() {
-    let res = Resources::from_str("StatefulSet");
-    assert_eq!(res.unwrap(), Resources::StatefulSet)
+    assert_eq!(
+        Resources::from_str("StatefulSet").unwrap(),
+        Resources::StatefulSet
+    );
+    assert_eq!(
+        Resources::from_str("StatefulSets").unwrap(),
+        Resources::StatefulSet
+    );
+    assert_eq!(
+        Resources::from_str("Statefulset").unwrap(),
+        Resources::StatefulSet
+    );
+    assert_eq!(
+        Resources::from_str("Statefulsets").unwrap(),
+        Resources::StatefulSet
+    );
+    assert_eq!(
+        Resources::from_str("statefulset").unwrap(),
+        Resources::StatefulSet
+    );
+    assert_eq!(
+        Resources::from_str("statefulsets").unwrap(),
+        Resources::StatefulSet
+    );
 }
 
 #[test]
@@ -225,6 +276,6 @@ fn test_invalid() {
     let res = Resources::from_str("StatefulSet1");
     assert_eq!(
         res.unwrap_err().to_string(),
-        "Invalid User Input: Unsupported resource type StatefulSet1, Currently supports only Deployment, StatefulSet, Namespace (Case Sensitive)".to_string()
+        "Invalid User Input: Unsupported resource type statefulset1, Currently supports only Deployment, StatefulSet, Namespace (Case Sensitive)".to_string()
     )
 }

@@ -3,6 +3,7 @@ use crate::resource::common::ScalingMachinery;
 use crate::Error;
 use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
+use k8s_openapi::api::batch::v1::CronJob;
 use k8s_openapi::api::core::v1::Namespace;
 use kube::api::{Patch, PatchParams};
 use kube::{Api, Client};
@@ -19,7 +20,7 @@ pub(crate) struct Rule {
     pub(crate) uptime: String,
     pub(crate) jmespath: String,
     pub(crate) resource: Vec<String>,
-    pub(crate) replicas: String,
+    pub(crate) replicas: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -45,6 +46,8 @@ impl JMSExpression for Deployment {}
 
 impl JMSExpression for Namespace {}
 
+impl JMSExpression for CronJob {}
+
 impl JMSExpression for StatefulSet {}
 
 #[async_trait]
@@ -56,6 +59,7 @@ pub trait Res {
 pub trait ResourceExtension: Send + Sync {
     async fn patch_resource(&self, name: &str, patch_value: &Value) -> Result<(), Error>;
     // method is implmented by downscaler aka processor
+    //TODO replicas to option<i32>
     async fn processor_scaler_resource_items(
         &self,
         replicas: i32,
@@ -172,11 +176,62 @@ impl ResourceExtension for Api<StatefulSet> {
     }
 }
 
+#[async_trait]
+impl ResourceExtension for Api<CronJob> {
+    async fn patch_resource(&self, name: &str, patch_value: &Value) -> Result<(), Error> {
+        self.patch(name, &PatchParams::default(), &Patch::Merge(patch_value))
+            .await?;
+        Ok(())
+    }
+
+    async fn processor_scaler_resource_items(
+        &self,
+        _replicas: i32,
+        c: Client,
+        is_uptime: bool,
+    ) -> Result<(), Error> {
+        let list = self.list(&Default::default()).await?;
+        for item in list.items {
+            let pat = ScalingMachinery {
+                tobe_replicas: 0,                   // doesn't apply to cronjob
+                original_replicas: "0".to_string(), // doesn't apply to cronjob
+                name: item.metadata.name.unwrap(),
+                namespace: item.metadata.namespace.unwrap(),
+                annotations: item.metadata.annotations,
+                resource_type: Resources::CronJob,
+            };
+            pat.scaling_machinery(c.clone(), is_uptime).await?;
+        }
+        Ok(())
+    }
+
+    async fn controller_upscale_resource_items(
+        &self,
+        replicas: Option<i32>,
+        client: Client,
+    ) -> Result<(), Error> {
+        let ss_list = self.list(&Default::default()).await.unwrap();
+        for ss in &ss_list.items {
+            debug!("parsing deployment resource {:?}", ss.metadata.name);
+            // let u = UpscaleMachinery {
+            //     replicas,
+            //     name: ss.metadata.name.as_ref().unwrap().to_string(),
+            //     namespace: ss.metadata.namespace.as_ref().unwrap().to_string(),
+            //     annotations: ss.metadata.annotations.to_owned(),
+            //     resource_type: Resources::StatefulSet,
+            // };
+            // u.upscale_machinery(client.clone()).await?
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Resources {
     Deployment,
     StatefulSet,
     Namespace,
+    CronJob,
 }
 
 impl FromStr for Resources {
@@ -186,8 +241,9 @@ impl FromStr for Resources {
             "deployments" | "deployment" => Ok(Resources::Deployment),
             "statefulset"| "statefulsets" => Ok(Resources::StatefulSet),
             "namespace" | "namespaces" => Ok(Resources::Namespace),
+            "cronjob" | "cronjobs" => Ok(Resources::CronJob),
             e => Err(Error::UserInputError(format!(
-                "Unsupported resource type {}, Currently supports only Deployment, StatefulSet, Namespace (Case Sensitive)",
+                "Unsupported resource type {}, Currently supports only Deployment, StatefulSet, Namespace, CronJob",
                 e
             ))),
         }
@@ -200,6 +256,7 @@ impl std::fmt::Display for Resources {
             Resources::Deployment => write!(f, "Deployment"),
             Resources::StatefulSet => write!(f, "StatefulSet"),
             Resources::Namespace => write!(f, "Namespace"),
+            Resources::CronJob => write!(f, "CronJob"),
         }
     }
 }
@@ -243,6 +300,15 @@ fn test_valid_input_resource_namespace() {
         Resources::Namespace
     );
 }
+
+#[test]
+fn test_valid_input_resource_cronjob() {
+    assert_eq!(Resources::from_str("CronJob").unwrap(), Resources::CronJob);
+    assert_eq!(Resources::from_str("cronjob").unwrap(), Resources::CronJob);
+    assert_eq!(Resources::from_str("cronjobs").unwrap(), Resources::CronJob);
+    assert_eq!(Resources::from_str("CronJobs").unwrap(), Resources::CronJob);
+}
+
 #[test]
 fn test_valid_input_resource_statefulset() {
     assert_eq!(
@@ -276,6 +342,6 @@ fn test_invalid() {
     let res = Resources::from_str("StatefulSet1");
     assert_eq!(
         res.unwrap_err().to_string(),
-        "Invalid User Input: Unsupported resource type statefulset1, Currently supports only Deployment, StatefulSet, Namespace (Case Sensitive)".to_string()
+        "Invalid User Input: Unsupported resource type statefulset1, Currently supports only Deployment, StatefulSet, Namespace, CronJob".to_string()
     )
 }

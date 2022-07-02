@@ -43,6 +43,7 @@ impl UpscaleMachinery {
                     Box::new(Api::<StatefulSet>::namespaced(c.clone(), &self.namespace))
                 }
                 Resources::Namespace => todo!(),
+                Resources::CronJob => todo!(),
             };
             Ok(rs.patch_resource(&self.name, &patch).await?)
         } else {

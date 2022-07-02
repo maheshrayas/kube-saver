@@ -107,6 +107,7 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
                     Resources::Namespace => {
                         upscaler::upscale_ns(client.clone(), res.replicas, &res.tags).await?
                     }
+                    Resources::CronJob => todo!(),
                 };
             }
             let api: Api<Upscaler> = Api::namespaced(client, &namespace);

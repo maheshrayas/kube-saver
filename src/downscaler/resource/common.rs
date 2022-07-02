@@ -1,7 +1,7 @@
 use crate::{Error, ResourceExtension, Resources};
-use k8s_openapi::api::apps::v1::*;
+use k8s_openapi::api::{apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob};
 use kube::{client::Client, Api};
-use serde_json::json;
+use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 use tracing::info;
 
@@ -13,9 +13,6 @@ pub struct ScalingMachinery {
     pub(crate) annotations: Option<BTreeMap<String, String>>,
     pub(crate) resource_type: Resources,
 }
-
-//TODO: Struct method
-//TODO: use the same method in crd and looper
 
 impl ScalingMachinery {
     pub async fn scaling_machinery(&self, c: Client, is_uptime: bool) -> Result<(), Error> {
@@ -88,17 +85,29 @@ impl ScalingMachinery {
         replicas: i32,
         is_downscale: &str,
     ) -> Result<(), Error> {
-        let patch = json!({
-            "metadata": {
-                "annotations": {
-                    "kubesaver.com/is_downscaled": is_downscale,
-                    "kubesaver.com/original_count": orig_count
-                },
-            },
-            "spec": {
-                "replicas": replicas
+        let annotations: Value = json!({
+            "annotations": {
+                "kubesaver.com/is_downscaled": is_downscale,
+                "kubesaver.com/original_count": orig_count
             }
         });
+        let spec = match self.resource_type {
+            Resources::Deployment | Resources::Namespace | Resources::StatefulSet => {
+                json!({ "replicas": replicas })
+            }
+
+            Resources::CronJob => {
+                json!(
+                     {
+                        "suspend": is_downscale.parse::<bool>().unwrap()
+                    }
+                )
+            }
+        };
+        let mut patch = Map::new();
+        patch.insert("metadata".to_string(), annotations);
+        patch.insert("spec".to_string(), spec);
+        let patch_object = Value::Object(patch);
 
         let rs: Box<dyn ResourceExtension + Send + Sync> = match &self.resource_type {
             Resources::Deployment => Box::new(Api::<Deployment>::namespaced(
@@ -109,8 +118,12 @@ impl ScalingMachinery {
                 client.clone(),
                 &self.namespace,
             )),
+            Resources::CronJob => {
+                Box::new(Api::<CronJob>::namespaced(client.clone(), &self.namespace))
+            }
             Resources::Namespace => todo!(),
         };
-        rs.patch_resource(&self.name, &patch).await
+
+        rs.patch_resource(&self.name, &patch_object).await
     }
 }

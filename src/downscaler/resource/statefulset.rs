@@ -7,7 +7,7 @@ use crate::{Error, JMSExpression, Resources};
 
 use super::common::ScalingMachinery;
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct StateSet<'a> {
     pub(crate) expression: &'a str,
     pub(crate) replicas: i32,

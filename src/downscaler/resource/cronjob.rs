@@ -6,7 +6,7 @@ use kube::{client::Client, Api};
 
 use super::common::ScalingMachinery;
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct CJob<'a> {
     pub(crate) expression: &'a str,
     pub(crate) is_uptime: bool,

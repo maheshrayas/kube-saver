@@ -1,0 +1,7 @@
+rules:
+  # all cronjob suspend must true
+  - id: rules-downscale-kuber10
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney
+    jmespath: "metadata.name == 'test-kuber10-cj2' || metadata.name == 'test-kuber10-cj1' "
+    resource:
+      - cronjob

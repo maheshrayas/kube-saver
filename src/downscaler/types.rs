@@ -14,7 +14,7 @@ use serde_json::Value;
 use std::str::FromStr;
 use tracing::debug;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub(crate) struct Rule {
     pub(crate) id: String,
     pub(crate) uptime: String,
@@ -23,7 +23,7 @@ pub(crate) struct Rule {
     pub(crate) replicas: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Rules {
     pub(crate) rules: Vec<Rule>,
 }
@@ -210,23 +210,23 @@ impl ResourceExtension for Api<CronJob> {
         replicas: Option<i32>,
         client: Client,
     ) -> Result<(), Error> {
-        let ss_list = self.list(&Default::default()).await.unwrap();
-        for ss in &ss_list.items {
-            debug!("parsing deployment resource {:?}", ss.metadata.name);
-            // let u = UpscaleMachinery {
-            //     replicas,
-            //     name: ss.metadata.name.as_ref().unwrap().to_string(),
-            //     namespace: ss.metadata.namespace.as_ref().unwrap().to_string(),
-            //     annotations: ss.metadata.annotations.to_owned(),
-            //     resource_type: Resources::StatefulSet,
-            // };
-            // u.upscale_machinery(client.clone()).await?
+        let cj_list = self.list(&Default::default()).await.unwrap();
+        for cj in &cj_list.items {
+            debug!("parsing cronjob resource {:?}", cj.metadata.name);
+            let u = UpscaleMachinery {
+                replicas,
+                name: cj.metadata.name.as_ref().unwrap().to_string(),
+                namespace: cj.metadata.namespace.as_ref().unwrap().to_string(),
+                annotations: cj.metadata.annotations.to_owned(),
+                resource_type: Resources::CronJob,
+            };
+            u.upscale_machinery(client.clone()).await?
         }
         Ok(())
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Resources {
     Deployment,
     StatefulSet,

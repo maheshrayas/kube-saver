@@ -29,7 +29,6 @@ pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
             Err(e) => {
                 // dont break the loop/process, just report the error to stdout
                 error!("Error: {}", e);
-                ()
             }
         };
 
@@ -69,10 +68,7 @@ impl Rules {
 
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
-                    let replicas = match e.replicas {
-                        Some(i) => i,
-                        None => 0,
-                    };
+                    let replicas = e.replicas.unwrap_or(0);
                     match f.unwrap() {
                         Resources::Deployment => {
                             let d = Deploy::new(&e.jmespath, replicas, is_uptime);
@@ -124,7 +120,10 @@ fn validate_invalid_datetime_regex() {
         ..Default::default()
     };
     let uptime = r.validate_uptime();
-    assert_eq!(uptime.unwrap(), false);
+    assert_eq!(
+        uptime.unwrap_err().to_string(),
+        "Invalid User Input: Input datetime format didn't match <DAY>-<DAY> <START_TIME_HR>:<START_TIME_MIN>-<END_TIME_HR>:<END_TIME_MIN> <TIMEZONE>, Refer sample example in README.md".to_string()
+    )
 }
 
 #[test]

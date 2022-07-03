@@ -6,7 +6,7 @@ use k8s_openapi::api::{
 };
 use kube::{client::Client, Api};
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct Nspace<'a> {
     pub(crate) expression: &'a str,
     pub(crate) replicas: i32,

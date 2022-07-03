@@ -1,0 +1,13 @@
+rules:
+  - id: rules-alwaysdown-kuber9-statfulset
+    uptime: Mon-Sun 23:58-23:59 Australia/Sydney # only up between 23:58 - 23:59
+    jmespath: "metadata.name == 'test-kuber9-cj1'"
+    resource:
+      - cronjob
+    replicas: 0
+  - id: rules-alwaysup-kuber9-cronjob
+    uptime: Mon-Sun 00:00-23:59 Australia/Sydney # all up
+    jmespath: "metadata.name == 'test-kuber9-cj2'"
+    resource:
+      - cronjob
+    replicas: 0

@@ -5,19 +5,25 @@ rules:
     # https://jmespath.org/
     jmespath: "metadata.name == 'go-app-deployment'"
     resource:
-      - Deployment # type of resource (case sensitive)
+      - Deployment # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime
   # scale down all statefulset with name web when current time/day not in uptime
   - id: rules-downscale-statefulset
     uptime: Mon-Fri 09:00-17:00 Australia/Sydney
     jmespath: "metadata.name == 'web'"
     resource:
-      - StatefulSet # type of resource (case sensitive)
+      - StatefulSet # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime
-  # scale down all deployment & statefulset in namespace kuber when current time/day not in uptime
+  # scale down all deployment, statefulset, cronjob in namespace kuber when current time/day not in uptime
   - id: rules-downscale-all-in-namespace
     uptime: Mon-Fri 09:00-17:00 Australia/Sydney
     jmespath: "metadata.name == 'kuber'"
     resource:
-      - Namespace # type of resource (case sensitive)
+      - Namespace # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime
+  # suspend cronjob1 when current time/day not in uptime
+  - id: rules-suspend-cronjob
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    jmespath: "metadata.name == 'cronjob1'"
+    resource:
+      - cronjob # type of resource

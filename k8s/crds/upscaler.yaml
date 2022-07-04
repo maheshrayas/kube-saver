@@ -1,7 +1,7 @@
 apiVersion: kubesaver.com/v1
 kind: Upscaler
 metadata:
-  name: upscaler-all-deployments-kuber-namesapce
+  name: upscaler--resources
   namespace: default
 spec:
   scale:
@@ -19,3 +19,7 @@ spec:
       tags:
         metadata.name: "web"
       replicas: 2 # not a mandatory, if not defined, the number of replicas will be original count
+      # sets suspend = false
+    - resource: CronJob
+      tags:
+        metadata.name: "cronjob1"

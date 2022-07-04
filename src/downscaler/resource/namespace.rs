@@ -1,11 +1,12 @@
 use crate::downscaler::{JMSExpression, Res};
 use crate::{Error, ResourceExtension};
 use async_trait::async_trait;
-use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
-use k8s_openapi::api::core::v1::Namespace;
+use k8s_openapi::api::{
+    apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob, core::v1::Namespace,
+};
 use kube::{client::Client, Api};
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct Nspace<'a> {
     pub(crate) expression: &'a str,
     pub(crate) replicas: i32,
@@ -40,6 +41,12 @@ impl<'a> Res for Nspace<'a> {
                     .await?;
 
                 let ss_api: Api<StatefulSet> =
+                    Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
+                ss_api
+                    .processor_scaler_resource_items(self.replicas, c.clone(), self.is_uptime)
+                    .await?;
+
+                let ss_api: Api<CronJob> =
                     Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
                 ss_api
                     .processor_scaler_resource_items(self.replicas, c.clone(), self.is_uptime)

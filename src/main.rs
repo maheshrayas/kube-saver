@@ -88,7 +88,7 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
         Some(namespace) => namespace,
     };
     // Performs action as decided by the `determine_action` function.
-    return match determine_action(&upscaler) {
+    match determine_action(&upscaler) {
         UpscalerAction::Create => {
             let name = upscaler.name(); // Name of the Upscaler resource is used to name the subresources as well.
             finalizer::add(client.clone(), &name, &namespace).await?;
@@ -107,6 +107,9 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
                     Resources::Namespace => {
                         upscaler::upscale_ns(client.clone(), res.replicas, &res.tags).await?
                     }
+                    Resources::CronJob => {
+                        upscaler::enable_cronjob(client.clone(), &res.tags).await?
+                    }
                 };
             }
             let api: Api<Upscaler> = Api::namespaced(client, &namespace);
@@ -122,14 +125,14 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
         }
         // The resource is already in desired state, do nothing and re-check after 10 seconds
         UpscalerAction::NoOp => Ok(Action::requeue(Duration::from_secs(10))),
-    };
+    }
 }
 
 /// # Arguments
 /// - `Upscaler`: A reference to `Upscaler` being reconciled to decide next action upon.
 #[cfg(not(tarpaulin_include))]
 fn determine_action(upscaler: &Upscaler) -> UpscalerAction {
-    return if upscaler.meta().deletion_timestamp.is_some() {
+    if upscaler.meta().deletion_timestamp.is_some() {
         UpscalerAction::Delete
     } else if upscaler
         .meta()
@@ -140,5 +143,5 @@ fn determine_action(upscaler: &Upscaler) -> UpscalerAction {
         UpscalerAction::Create
     } else {
         UpscalerAction::NoOp
-    };
+    }
 }

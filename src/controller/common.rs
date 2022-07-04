@@ -1,7 +1,7 @@
 use crate::{Error, ResourceExtension, Resources};
-use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
+use k8s_openapi::api::{apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob};
 use kube::{Api, Client};
-use serde_json::json;
+use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 use tracing::info;
 
@@ -22,18 +22,33 @@ impl UpscaleMachinery {
             .get("kubesaver.com/is_downscaled");
         // before upscaling always crosscheck if the resource is downscaled by kube-saver
         if is_annotated.is_some() {
-            let replicas = self
-                .get_replicas(self.replicas, self.annotations.to_owned())
-                .await;
-            info!(
-                "scaling up {} in namespace {} to {}",
-                self.name, self.namespace, replicas
-            );
-            let patch = json!({
-                "spec": {
-                    "replicas": replicas
+            let spec = match self.resource_type {
+                Resources::Deployment | Resources::Namespace | Resources::StatefulSet => {
+                    let replicas = self
+                        .get_replicas(self.replicas, self.annotations.to_owned())
+                        .await;
+                    info!(
+                        "scaling up {} in namespace {} to {}",
+                        self.name, self.namespace, replicas
+                    );
+                    json!({ "replicas": replicas })
                 }
-            });
+
+                Resources::CronJob => {
+                    info!(
+                        "Setting CronJob {} in namespace {} to Active",
+                        self.name, self.namespace,
+                    );
+                    json!(
+                         {
+                            "suspend": false
+                        }
+                    )
+                }
+            };
+            let mut patch = Map::new();
+            patch.insert("spec".to_string(), spec);
+            let patch_object = Value::Object(patch);
 
             let rs: Box<dyn ResourceExtension> = match self.resource_type {
                 Resources::Deployment => {
@@ -43,8 +58,11 @@ impl UpscaleMachinery {
                     Box::new(Api::<StatefulSet>::namespaced(c.clone(), &self.namespace))
                 }
                 Resources::Namespace => todo!(),
+                Resources::CronJob => {
+                    Box::new(Api::<CronJob>::namespaced(c.clone(), &self.namespace))
+                }
             };
-            Ok(rs.patch_resource(&self.name, &patch).await?)
+            Ok(rs.patch_resource(&self.name, &patch_object).await?)
         } else {
             // do nothing
             Ok(())

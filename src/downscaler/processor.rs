@@ -1,4 +1,5 @@
 use crate::downscaler::{Res, Resources, Rule, Rules};
+use crate::resource::cronjob::CJob;
 use crate::resource::deployment::Deploy;
 use crate::resource::namespace::Nspace;
 use crate::resource::statefulset::StateSet;
@@ -22,7 +23,15 @@ pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
         interval_millis.as_secs()
     );
     loop {
-        r.process_rules(client.clone()).await?;
+        let ret = r.process_rules(client.clone()).await;
+        match ret {
+            Ok(a) => a,
+            Err(e) => {
+                // dont break the loop/process, just report the error to stdout
+                error!("Error: {}", e);
+            }
+        };
+
         tokio::time::sleep(interval_millis).await;
     }
 }
@@ -37,10 +46,10 @@ impl Rules {
             // check if the resource needs to be up
             let is_uptime = match e.validate_uptime() {
                 Ok(is_uptrue) => is_uptrue,
-                Err(e) => {
-                    error!("{}", e);
-                    // just return false rather than panic or non-zero exit
-                    false
+                Err(er) => {
+                    error!("Error while reading rule id {} : {} ", e.id, er);
+                    // don't break the loop
+                    continue;
                 }
             };
 
@@ -59,19 +68,23 @@ impl Rules {
 
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
+                    let replicas = e.replicas.unwrap_or(0);
                     match f.unwrap() {
                         Resources::Deployment => {
-                            let d = Deploy::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                            let d = Deploy::new(&e.jmespath, replicas, is_uptime);
                             d.downscale(client.clone()).await?
                         }
                         Resources::Namespace => {
-                            let n = Nspace::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                            let n = Nspace::new(&e.jmespath, replicas, is_uptime);
                             n.downscale(client.clone()).await?
                         }
                         Resources::StatefulSet => {
-                            let s =
-                                StateSet::new(&e.jmespath, e.replicas.parse::<i32>()?, is_uptime);
+                            let s = StateSet::new(&e.jmespath, replicas, is_uptime);
                             s.downscale(client.clone()).await?
+                        }
+                        Resources::CronJob => {
+                            let c = CJob::new(&e.jmespath, is_uptime);
+                            c.downscale(client.clone()).await?
                         }
                     };
                 }
@@ -92,7 +105,7 @@ impl Rule {
                     let m = value.captures(&self.uptime).unwrap();
                     is_uptime(m)
                 }
-                false => Ok(false),
+                false => Err(Error::UserInputError(String::from("Input datetime format didn't match <DAY>-<DAY> <START_TIME_HR>:<START_TIME_MIN>-<END_TIME_HR>:<END_TIME_MIN> <TIMEZONE>, Refer sample example in README.md"))),
             },
             Err(e) => Err(Error::UserInputError(e.to_string())),
         };
@@ -107,7 +120,10 @@ fn validate_invalid_datetime_regex() {
         ..Default::default()
     };
     let uptime = r.validate_uptime();
-    assert_eq!(uptime.unwrap(), false);
+    assert_eq!(
+        uptime.unwrap_err().to_string(),
+        "Invalid User Input: Input datetime format didn't match <DAY>-<DAY> <START_TIME_HR>:<START_TIME_MIN>-<END_TIME_HR>:<END_TIME_MIN> <TIMEZONE>, Refer sample example in README.md".to_string()
+    )
 }
 
 #[test]

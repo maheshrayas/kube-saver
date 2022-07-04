@@ -1,8 +1,9 @@
 use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::JMSExpression;
 use crate::{Error, ResourceExtension, Resources};
-use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
-use k8s_openapi::api::core::v1::Namespace;
+use k8s_openapi::api::{
+    apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob, core::v1::Namespace,
+};
 use kube::{Api, Client};
 use std::collections::BTreeMap;
 use tracing::debug;
@@ -72,6 +73,33 @@ pub async fn upscale_statefulset(
     Ok(())
 }
 
+/// Set CronJob Suspend status to False when CustomResource Upscaler is applied to cluster
+pub async fn enable_cronjob(client: Client, tags: &BTreeMap<String, String>) -> Result<(), Error> {
+    let api: Api<CronJob> = Api::all(client.clone());
+    let list = api.list(&Default::default()).await?;
+    for (key, value) in tags {
+        let exp = format!(r#"{}=='{}'"#, key, value);
+        debug!("parsing jmes exp {}", exp);
+        for item in &list.items {
+            debug!("parsing cronjob resource {:?}", item.metadata.name);
+            // for the list of all deployment, check if the tag values matches with the specific cronjob
+            // For example: metadata.labels.app = nginx is matching with the cronjob manifest
+            // Invoke the trait JMSExpression default parse method. Statefulset implements trait JMSExpression
+            let result = item.parse(&exp).await?;
+            if result {
+                let u = UpscaleMachinery {
+                    replicas: None,
+                    name: item.metadata.name.as_ref().unwrap().to_string(),
+                    namespace: item.metadata.namespace.as_ref().unwrap().to_string(),
+                    annotations: item.metadata.annotations.to_owned(),
+                    resource_type: Resources::CronJob,
+                };
+                u.upscale_machinery(client.clone()).await?
+            }
+        }
+    }
+    Ok(())
+}
 /// Upscale the Both Deployment & Statefulset Resource in the defined Namepace that matches the expression defined in the `tag` of CR Upscaler resource
 pub async fn upscale_ns(
     client: Client,
@@ -101,6 +129,12 @@ pub async fn upscale_ns(
                     Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
                 ss_api
                     .controller_upscale_resource_items(replicas, client.clone())
+                    .await?;
+                //Set CronJob Suspend status to False
+                let cj_api: Api<CronJob> =
+                    Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
+                cj_api
+                    .controller_upscale_resource_items(None, client.clone())
                     .await?;
             }
         }

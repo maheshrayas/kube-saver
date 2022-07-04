@@ -2,7 +2,7 @@ apiVersion: kubesaver.com/v1
 kind: Upscaler
 metadata:
   name: upscaler--resources
-  namespace: default
+  namespace: kube-saver
 spec:
   scale:
     # upscale all deployment in namespace kuber to original count which was downscaled by kube-saver

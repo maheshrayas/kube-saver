@@ -12,32 +12,29 @@ use tracing::debug;
 pub async fn upscale_deploy(
     client: Client,
     replicas: Option<i32>,
-    tags: &BTreeMap<String, String>,
+    expression: &str,
 ) -> Result<(), Error> {
     let api: Api<Deployment> = Api::all(client.clone());
     let list = api.list(&Default::default()).await?;
     // parses the tag map object
-    for (key, value) in tags {
-        let exp = format!(r#"{}=='{}'"#, key, value);
-        debug!("parsing jmes exp {}", exp);
-        for item in &list.items {
-            debug!("parsing deployment resource {:?}", item.metadata.name);
-            // for the list of all deployment, check if the tag values matches with the specific deployment
-            // For example: metadata.labels.app = nginx is matching with the deployment manifest
-            // Invoke the trait JMSExpression default parse method. Deployment implements trait JMSExpression
-            let result = item.parse(&exp).await?;
-            if result {
-                let u = UpscaleMachinery {
-                    replicas,
-                    name: item.metadata.name.as_ref().unwrap().to_string(),
-                    namespace: item.metadata.namespace.as_ref().unwrap().to_string(),
-                    annotations: item.metadata.annotations.to_owned(),
-                    resource_type: Resources::Deployment,
-                };
-                u.upscale_machinery(client.clone()).await?
-            }
+    for item in &list.items {
+        debug!("parsing deployment resource {:?}", item.metadata.name);
+        // for the list of all deployment, check if the tag values matches with the specific deployment
+        // For example: metadata.labels.app = nginx is matching with the deployment manifest
+        // Invoke the trait JMSExpression default parse method. Deployment implements trait JMSExpression
+        let result = item.parse(&expression).await?;
+        if result {
+            let u = UpscaleMachinery {
+                replicas,
+                name: item.metadata.name.as_ref().unwrap().to_string(),
+                namespace: item.metadata.namespace.as_ref().unwrap().to_string(),
+                annotations: item.metadata.annotations.to_owned(),
+                resource_type: Resources::Deployment,
+            };
+            u.upscale_machinery(client.clone()).await?
         }
     }
+
     Ok(())
 }
 
@@ -45,31 +42,29 @@ pub async fn upscale_deploy(
 pub async fn upscale_statefulset(
     client: Client,
     replicas: Option<i32>,
-    tags: &BTreeMap<String, String>,
+    expression: &str,
 ) -> Result<(), Error> {
     let api: Api<StatefulSet> = Api::all(client.clone());
     let list = api.list(&Default::default()).await?;
-    for (key, value) in tags {
-        let exp = format!(r#"{}=='{}'"#, key, value);
-        debug!("parsing jmes exp {}", exp);
-        for item in &list.items {
-            debug!("parsing statefulset resource {:?}", item.metadata.name);
-            // for the list of all deployment, check if the tag values matches with the specific statefulset
-            // For example: metadata.labels.app = nginx is matching with the statefulset manifest
-            // Invoke the trait JMSExpression default parse method. Statefulset implements trait JMSExpression
-            let result = item.parse(&exp).await?;
-            if result {
-                let u = UpscaleMachinery {
-                    replicas,
-                    name: item.metadata.name.as_ref().unwrap().to_string(),
-                    namespace: item.metadata.namespace.as_ref().unwrap().to_string(),
-                    annotations: item.metadata.annotations.to_owned(),
-                    resource_type: Resources::StatefulSet,
-                };
-                u.upscale_machinery(client.clone()).await?
-            }
+
+    for item in &list.items {
+        debug!("parsing statefulset resource {:?}", item.metadata.name);
+        // for the list of all deployment, check if the tag values matches with the specific statefulset
+        // For example: metadata.labels.app = nginx is matching with the statefulset manifest
+        // Invoke the trait JMSExpression default parse method. Statefulset implements trait JMSExpression
+        let result = item.parse(&expression).await?;
+        if result {
+            let u = UpscaleMachinery {
+                replicas,
+                name: item.metadata.name.as_ref().unwrap().to_string(),
+                namespace: item.metadata.namespace.as_ref().unwrap().to_string(),
+                annotations: item.metadata.annotations.to_owned(),
+                resource_type: Resources::StatefulSet,
+            };
+            u.upscale_machinery(client.clone()).await?
         }
     }
+
     Ok(())
 }
 
@@ -104,26 +99,24 @@ pub async fn enable_cronjob(client: Client, tags: &BTreeMap<String, String>) -> 
 pub async fn upscale_ns(
     client: Client,
     replicas: Option<i32>,
-    tags: &BTreeMap<String, String>,
+    expression: &str,
 ) -> Result<(), Error> {
     let api: Api<Namespace> = Api::all(client.clone());
     let namespaces = api.list(&Default::default()).await.unwrap();
-    for (key, value) in tags {
-        let exp = format!(r#"{}=='{}'"#, key, value);
-        debug!("parsing jmes exp {}", exp);
-        for ns in &namespaces.items {
-            // for the list of all Namespace, check if the tag values matches with the specific namespace
-            // For example: metadata.name = backend is matching with the Namespace manifest
-            // Invoke the trait JMSExpression default parse method. Namespace implements trait JMSExpression
-            let result = ns.parse(&exp).await?;
-            if result {
-                // upscale deployment
-                let dd_api: Api<Deployment> =
-                    Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
-                dd_api
-                    .controller_upscale_resource_items(replicas, client.clone())
-                    .await?;
+    for ns in &namespaces.items {
+        // for the list of all Namespace, check if the tag values matches with the specific namespace
+        // For example: metadata.name = backend is matching with the Namespace manifest
+        // Invoke the trait JMSExpression default parse method. Namespace implements trait JMSExpression
+        let result = ns.parse(&expression).await?;
+        if result {
+            // upscale deployment
+            let dd_api: Api<Deployment> =
+                Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
+            dd_api
+                .controller_upscale_resource_items(replicas, client.clone())
+                .await?;
 
+<<<<<<< HEAD
                 //upscale statefulset
                 let ss_api: Api<StatefulSet> =
                     Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
@@ -137,7 +130,16 @@ pub async fn upscale_ns(
                     .controller_upscale_resource_items(None, client.clone())
                     .await?;
             }
+=======
+            //upscale statefulset
+            let ss_api: Api<StatefulSet> =
+                Api::namespaced(client.clone(), ns.metadata.name.as_ref().unwrap());
+            ss_api
+                .controller_upscale_resource_items(replicas, client.clone())
+                .await?;
+>>>>>>> ffa973d (feat: update crd)
         }
     }
+
     Ok(())
 }

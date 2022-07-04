@@ -24,17 +24,15 @@ spec:
               type: object
               properties:
                 scale:
-                  items: 
+                  items:
                     type: object
                     properties:
-                      resource: 
+                      resource:
                         type: string
                       replicas:
                         type: integer
                         format: int32
-                      tags:
-                        type: object
-                        additionalProperties:
-                          type: string
-                    required: ["tags","resource"]
+                      jmespath:
+                        type: string
+                    required: ["jmespath", "resource"]
                   type: array

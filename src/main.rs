@@ -98,18 +98,18 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
                 let f = Resources::from_str(&res.resource).unwrap();
                 match f {
                     Resources::Deployment => {
-                        upscaler::upscale_deploy(client.clone(), res.replicas, &res.expression)
+                        upscaler::upscale_deploy(client.clone(), res.replicas, &res.jmespath)
                             .await?
                     }
                     Resources::StatefulSet => {
-                        upscaler::upscale_statefulset(client.clone(), res.replicas, &res.expression)
+                        upscaler::upscale_statefulset(client.clone(), res.replicas, &res.jmespath)
                             .await?
                     }
                     Resources::Namespace => {
-                        upscaler::upscale_ns(client.clone(), res.replicas, &res.expression).await?
+                        upscaler::upscale_ns(client.clone(), res.replicas, &res.jmespath).await?
                     }
                     Resources::CronJob => {
-                        upscaler::enable_cronjob(client.clone(), &res.expression).await?
+                        upscaler::enable_cronjob(client.clone(), &res.jmespath).await?
                     }
                 };
             }

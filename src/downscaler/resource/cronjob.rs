@@ -31,7 +31,7 @@ impl<'a> Res for CJob<'a> {
             let result = item.parse(self.expression).await?;
             if result {
                 let pat = ScalingMachinery {
-                    tobe_replicas: 0,                   // doesn't apply to cronjob
+                    tobe_replicas: None,                // doesn't apply to cronjob
                     original_replicas: "0".to_string(), // doesn't apply to cronjob
                     name: item.metadata.name.unwrap(),
                     namespace: item.metadata.namespace.unwrap(),

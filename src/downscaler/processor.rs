@@ -68,18 +68,17 @@ impl Rules {
 
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
-                    let replicas = e.replicas.unwrap_or(0);
                     match f.unwrap() {
                         Resources::Deployment => {
-                            let d = Deploy::new(&e.jmespath, replicas, is_uptime);
+                            let d = Deploy::new(&e.jmespath, e.replicas, is_uptime);
                             d.downscale(client.clone()).await?
                         }
                         Resources::Namespace => {
-                            let n = Nspace::new(&e.jmespath, replicas, is_uptime);
+                            let n = Nspace::new(&e.jmespath, e.replicas, is_uptime);
                             n.downscale(client.clone()).await?
                         }
                         Resources::StatefulSet => {
-                            let s = StateSet::new(&e.jmespath, replicas, is_uptime);
+                            let s = StateSet::new(&e.jmespath, e.replicas, is_uptime);
                             s.downscale(client.clone()).await?
                         }
                         Resources::CronJob => {

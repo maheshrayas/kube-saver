@@ -18,7 +18,7 @@ spec:
       serviceAccountName: kube-saver
       containers:
         - name: kube-saver-operator
-          image: maheshrayas/kube-saver:v0.0.4
+          image: maheshrayas/kube-saver:v0.3.0
           args:
             - "--interval=60"
             - "--debug"

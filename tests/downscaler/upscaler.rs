@@ -23,12 +23,9 @@ async fn test4_apply_upscaler_on_downscaled_for_deployment() {
     assert_eq!(d.spec.unwrap().replicas, Some(0));
     let d = api.get("test-kuber4-deploy2").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(0));
-    let mut upscale_tags = BTreeMap::new();
-    upscale_tags.insert(
-        "metadata.name".to_string(),
-        "test-kuber4-deploy1".to_string(),
-    );
-    upscale_deploy(client.clone(), None, &upscale_tags).await;
+    let mut exp = "metadata.name=='test-kuber4-deploy1'";
+
+    upscale_deploy(client.clone(), None, exp).await;
     // kubectl apply upscaler.yaml
     // // Upsale CR must scale up test-kuber4-deploy1 to 2
     let d = api.get("test-kuber4-deploy1").await.unwrap();
@@ -60,9 +57,8 @@ async fn test5_apply_upscaler_on_downscaled_for_namespace() {
     let c_api = c.get("test-kuber5-cj1").await.unwrap();
     assert_eq!(c_api.spec.unwrap().suspend.unwrap(), true);
 
-    let mut upscale_tags = BTreeMap::new();
-    upscale_tags.insert("metadata.name".to_string(), "kuber5".to_string());
-    upscale_ns(client.clone(), None, &upscale_tags).await;
+    let mut exp = "metadata.name=='kuber5'";
+    upscale_ns(client.clone(), None, exp).await;
     // kubectl apply upscaler.yaml
     // // Upsale CR must scale up test-kuber4-deploy1 to 2
     let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber5");
@@ -89,9 +85,8 @@ async fn test5_apply_upscaler_on_downscaled_for_statefulset() {
     let api: Api<StatefulSet> = Api::namespaced(client.clone(), "kuber6");
     let d = api.get("test-kuber6-ss2").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(0));
-    let mut upscale_tags = BTreeMap::new();
-    upscale_tags.insert("metadata.name".to_string(), "test-kuber6-ss2".to_string());
-    upscale_statefulset(client.clone(), None, &upscale_tags).await;
+    let mut exp = "metadata.name=='test-kuber6-ss2'";
+    upscale_statefulset(client.clone(), None, exp).await;
     let api: Api<StatefulSet> = Api::namespaced(client.clone(), "kuber6");
     let d = api.get("test-kuber6-ss2").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(1));
@@ -110,12 +105,8 @@ async fn test5_apply_upscaler_on_downscaled_for_cj() {
     assert_eq!(c_api.spec.unwrap().suspend.unwrap(), true);
     let c_api = api.get("test-kuber10-cj2").await.unwrap();
     assert_eq!(c_api.spec.unwrap().suspend.unwrap(), true);
-    let mut upscale_tags = BTreeMap::new();
-    upscale_tags.insert("metadata.name".to_string(), "test-kuber10-cj1".to_string());
-    enable_cronjob(client.clone(), &upscale_tags).await;
-    let mut upscale_tags = BTreeMap::new();
-    upscale_tags.insert("metadata.name".to_string(), "test-kuber10-cj2".to_string());
-    enable_cronjob(client.clone(), &upscale_tags).await;
+    let mut exp = "metadata.name=='test-kuber10-cj1' || metadata.name=='test-kuber10-cj2'";
+    enable_cronjob(client.clone(), exp).await;
     let api: Api<CronJob> = Api::namespaced(client.clone(), "kuber10");
     let c_api = api.get("test-kuber10-cj1").await.unwrap();
     assert_eq!(c_api.spec.unwrap().suspend.unwrap(), false);

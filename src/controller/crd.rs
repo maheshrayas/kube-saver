@@ -1,7 +1,6 @@
 use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 #[derive(CustomResource, Serialize, Deserialize, Debug, PartialEq, Eq, Clone, JsonSchema)]
 #[kube(
@@ -19,7 +18,7 @@ pub struct UpscalerSpec {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, JsonSchema)]
 pub struct Resource {
     pub resource: String,
-    pub tags: BTreeMap<String, String>,
+    pub jmespath: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,
 }

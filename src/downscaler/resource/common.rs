@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use tracing::info;
 
 pub struct ScalingMachinery {
-    pub(crate) tobe_replicas: i32,
+    pub(crate) tobe_replicas: Option<i32>,
     pub(crate) original_replicas: String,
     pub(crate) name: String,
     pub(crate) namespace: String,
@@ -68,7 +68,7 @@ impl ScalingMachinery {
                     self.patching(
                         c.clone(),
                         &scale_up.to_string(), // after scaleup, keep the kubesaver.com/original_count as the real non-zero count.
-                        scale_up,
+                        Some(scale_up),
                         "false",
                     )
                     .await?;
@@ -82,7 +82,7 @@ impl ScalingMachinery {
         &self,
         client: Client,
         orig_count: &str,
-        replicas: i32,
+        replicas: Option<i32>,
         is_downscale: &str,
     ) -> Result<(), Error> {
         let annotations: Value = json!({
@@ -93,7 +93,7 @@ impl ScalingMachinery {
         });
         let spec = match self.resource_type {
             Resources::Deployment | Resources::Namespace | Resources::StatefulSet => {
-                json!({ "replicas": replicas })
+                json!({ "replicas": replicas.unwrap_or(0) })
             }
 
             Resources::CronJob => {

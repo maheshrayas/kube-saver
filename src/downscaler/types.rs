@@ -62,7 +62,7 @@ pub trait ResourceExtension: Send + Sync {
     //TODO replicas to option<i32>
     async fn processor_scaler_resource_items(
         &self,
-        replicas: i32,
+        replicas: Option<i32>,
         client: Client,
         is_uptime: bool,
     ) -> Result<(), Error>;
@@ -84,7 +84,7 @@ impl ResourceExtension for Api<Deployment> {
 
     async fn processor_scaler_resource_items(
         &self,
-        replicas: i32,
+        replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
     ) -> Result<(), Error> {
@@ -135,7 +135,7 @@ impl ResourceExtension for Api<StatefulSet> {
 
     async fn processor_scaler_resource_items(
         &self,
-        replicas: i32,
+        replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
     ) -> Result<(), Error> {
@@ -186,14 +186,14 @@ impl ResourceExtension for Api<CronJob> {
 
     async fn processor_scaler_resource_items(
         &self,
-        _replicas: i32,
+        replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
     ) -> Result<(), Error> {
         let list = self.list(&Default::default()).await?;
         for item in list.items {
             let pat = ScalingMachinery {
-                tobe_replicas: 0,                   // doesn't apply to cronjob
+                tobe_replicas: replicas,
                 original_replicas: "0".to_string(), // doesn't apply to cronjob
                 name: item.metadata.name.unwrap(),
                 namespace: item.metadata.namespace.unwrap(),

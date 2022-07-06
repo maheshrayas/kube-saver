@@ -9,12 +9,12 @@ use kube::{client::Client, Api};
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct Nspace<'a> {
     pub(crate) expression: &'a str,
-    pub(crate) replicas: i32,
+    pub(crate) replicas: Option<i32>,
     pub(crate) is_uptime: bool,
 }
 
 impl<'a> Nspace<'a> {
-    pub fn new(expression: &'a str, replicas: i32, is_uptime: bool) -> Self {
+    pub fn new(expression: &'a str, replicas: Option<i32>, is_uptime: bool) -> Self {
         Nspace {
             expression,
             replicas,

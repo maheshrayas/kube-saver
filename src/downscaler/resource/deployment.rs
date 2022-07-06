@@ -9,12 +9,12 @@ use super::common::ScalingMachinery;
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct Deploy<'a> {
     pub(crate) expression: &'a str,
-    pub(crate) replicas: i32,
+    pub(crate) replicas: Option<i32>,
     pub(crate) is_uptime: bool,
 }
 
 impl<'a> Deploy<'a> {
-    pub fn new(expression: &'a str, replicas: i32, is_uptime: bool) -> Self {
+    pub fn new(expression: &'a str, replicas: Option<i32>, is_uptime: bool) -> Self {
         Deploy {
             expression,
             replicas,

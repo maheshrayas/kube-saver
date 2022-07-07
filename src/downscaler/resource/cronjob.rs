@@ -21,6 +21,8 @@ impl<'a> CJob<'a> {
     }
 }
 
+impl JMSExpression for CronJob {}
+
 #[async_trait]
 impl<'a> Res for CJob<'a> {
     async fn downscale(&self, c: Client) -> Result<(), Error> {

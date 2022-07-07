@@ -1,6 +1,7 @@
 use crate::downscaler::{Res, Resources, Rule, Rules};
 use crate::resource::cronjob::CJob;
 use crate::resource::deployment::Deploy;
+use crate::resource::hpa::Hpa;
 use crate::resource::namespace::Nspace;
 use crate::resource::statefulset::StateSet;
 use crate::{is_uptime, Error};
@@ -69,6 +70,10 @@ impl Rules {
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
                     match f.unwrap() {
+                        Resources::Hpa => {
+                            let h = Hpa::new(&e.jmespath, e.replicas, is_uptime);
+                            h.downscale(client.clone()).await?
+                        }
                         Resources::Deployment => {
                             let d = Deploy::new(&e.jmespath, e.replicas, is_uptime);
                             d.downscale(client.clone()).await?

@@ -24,6 +24,8 @@ impl<'a> StateSet<'a> {
     }
 }
 
+impl JMSExpression for StatefulSet {}
+
 #[async_trait]
 impl Res for StateSet<'_> {
     async fn downscale(&self, c: Client) -> Result<(), Error> {

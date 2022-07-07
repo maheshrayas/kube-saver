@@ -1,7 +1,7 @@
 use crate::downscaler::{JMSExpression, Res};
 use crate::{Error, Resources};
 use async_trait::async_trait;
-use k8s_openapi::api::apps::v1::*;
+use k8s_openapi::api::apps::v1::Deployment;
 use kube::{client::Client, Api};
 
 use super::common::ScalingMachinery;
@@ -22,6 +22,8 @@ impl<'a> Deploy<'a> {
         }
     }
 }
+
+impl JMSExpression for Deployment {}
 
 #[async_trait]
 impl<'a> Res for Deploy<'a> {

@@ -1,5 +1,8 @@
 use crate::{Error, ResourceExtension, Resources};
-use k8s_openapi::api::{apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob};
+use k8s_openapi::api::{
+    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v2::HorizontalPodAutoscaler,
+    batch::v1::CronJob,
+};
 use kube::{client::Client, Api};
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -17,14 +20,16 @@ pub struct ScalingMachinery {
 impl ScalingMachinery {
     pub async fn scaling_machinery(&self, c: Client, is_uptime: bool) -> Result<(), Error> {
         if !is_uptime {
-            // first time action
-            if self
-                .annotations
-                .to_owned()
-                .unwrap()
-                .get("kubesaver.com/is_downscaled")
-                .is_none()
+            // check if the resource has annotations
+            if self.annotations.is_none()
+                || self
+                    .annotations
+                    .to_owned()
+                    .unwrap()
+                    .get("kubesaver.com/is_downscaled")
+                    .is_none()
             {
+                // first time action
                 info!("downscaling {} {}", &self.resource_type, &self.name,);
                 self.patching(
                     c.clone(),
@@ -95,7 +100,9 @@ impl ScalingMachinery {
             Resources::Deployment | Resources::Namespace | Resources::StatefulSet => {
                 json!({ "replicas": replicas.unwrap_or(0) })
             }
-
+            Resources::Hpa => {
+                json!({ "minReplicas": replicas.unwrap_or(1) }) // minReplicas should >=1
+            }
             Resources::CronJob => {
                 json!(
                      {
@@ -122,6 +129,10 @@ impl ScalingMachinery {
                 Box::new(Api::<CronJob>::namespaced(client.clone(), &self.namespace))
             }
             Resources::Namespace => todo!(),
+            Resources::Hpa => Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
+                client.clone(),
+                &self.namespace,
+            )),
         };
 
         rs.patch_resource(&self.name, &patch_object).await

@@ -2,11 +2,16 @@ use crate::controller::common::UpscaleMachinery;
 use crate::resource::common::ScalingMachinery;
 use crate::Error;
 use async_trait::async_trait;
-use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
-use k8s_openapi::api::batch::v1::CronJob;
-use k8s_openapi::api::core::v1::Namespace;
-use kube::api::{Patch, PatchParams};
-use kube::{Api, Client};
+use k8s_openapi::api::{
+    apps::v1::{Deployment, StatefulSet},
+    autoscaling::v2::HorizontalPodAutoscaler,
+    batch::v1::CronJob,
+    core::v1::Namespace,
+};
+use kube::{
+    api::{Patch, PatchParams},
+    Api, Client,
+};
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use serde::{Deserialize, Serialize};
@@ -41,14 +46,6 @@ pub trait JMSExpression {
         Ok(result.as_boolean().unwrap())
     }
 }
-
-impl JMSExpression for Deployment {}
-
-impl JMSExpression for Namespace {}
-
-impl JMSExpression for CronJob {}
-
-impl JMSExpression for StatefulSet {}
 
 #[async_trait]
 pub trait Res {
@@ -232,6 +229,7 @@ pub enum Resources {
     StatefulSet,
     Namespace,
     CronJob,
+    Hpa,
 }
 
 impl FromStr for Resources {
@@ -242,8 +240,9 @@ impl FromStr for Resources {
             "statefulset"| "statefulsets" => Ok(Resources::StatefulSet),
             "namespace" | "namespaces" => Ok(Resources::Namespace),
             "cronjob" | "cronjobs" => Ok(Resources::CronJob),
+            "hpa" |"horizontalpodautoscaler" | "horizontalpodautoscalers" => Ok(Resources::Hpa),
             e => Err(Error::UserInputError(format!(
-                "Unsupported resource type {}, Currently supports only Deployment, StatefulSet, Namespace, CronJob",
+                "Unsupported resource type {}, Currently supports only Deployment, StatefulSet, Namespace, Hpa,CronJob",
                 e
             ))),
         }
@@ -257,6 +256,7 @@ impl std::fmt::Display for Resources {
             Resources::StatefulSet => write!(f, "StatefulSet"),
             Resources::Namespace => write!(f, "Namespace"),
             Resources::CronJob => write!(f, "CronJob"),
+            Resources::Hpa => write!(f, "Hpa"),
         }
     }
 }
@@ -307,6 +307,20 @@ fn test_valid_input_resource_cronjob() {
     assert_eq!(Resources::from_str("cronjob").unwrap(), Resources::CronJob);
     assert_eq!(Resources::from_str("cronjobs").unwrap(), Resources::CronJob);
     assert_eq!(Resources::from_str("CronJobs").unwrap(), Resources::CronJob);
+}
+
+#[test]
+fn test_valid_input_resource_hpa() {
+    assert_eq!(Resources::from_str("Hpa").unwrap(), Resources::Hpa);
+    assert_eq!(Resources::from_str("hpa").unwrap(), Resources::Hpa);
+    assert_eq!(
+        Resources::from_str("horizontalpodautoscaler").unwrap(),
+        Resources::Hpa
+    );
+    assert_eq!(
+        Resources::from_str("horizontalpodautoscales").unwrap(),
+        Resources::Hpa
+    );
 }
 
 #[test]

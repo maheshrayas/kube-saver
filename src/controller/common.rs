@@ -33,6 +33,12 @@ impl UpscaleMachinery {
                     );
                     json!({ "replicas": replicas })
                 }
+                Resources::Hpa => {
+                    let replicas = self
+                        .get_replicas(self.replicas, self.annotations.to_owned())
+                        .await;
+                    json!({ "minReplicas": replicas }) // minReplicas should >=1
+                }
 
                 Resources::CronJob => {
                     info!(
@@ -61,6 +67,7 @@ impl UpscaleMachinery {
                 Resources::CronJob => {
                     Box::new(Api::<CronJob>::namespaced(c.clone(), &self.namespace))
                 }
+                Resources::Hpa => todo!(),
             };
             Ok(rs.patch_resource(&self.name, &patch_object).await?)
         } else {

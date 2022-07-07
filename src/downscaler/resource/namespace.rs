@@ -23,6 +23,8 @@ impl<'a> Nspace<'a> {
     }
 }
 
+impl JMSExpression for Namespace {}
+
 #[async_trait]
 impl<'a> Res for Nspace<'a> {
     //TODO: logging

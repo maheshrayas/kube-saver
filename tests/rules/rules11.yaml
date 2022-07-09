@@ -1,0 +1,8 @@
+# Scale replicas to 1 with Hpa
+rules:
+  - id: rules-downscale-hpa-11
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney
+    jmespath: "metadata.name == 'test-kuber10-hpa'"
+    resource:
+      - hpa
+    replicas: 1

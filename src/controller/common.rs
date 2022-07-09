@@ -1,5 +1,8 @@
 use crate::{Error, ResourceExtension, Resources};
-use k8s_openapi::api::{apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob};
+use k8s_openapi::api::{
+    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v2::HorizontalPodAutoscaler,
+    batch::v1::CronJob,
+};
 use kube::{Api, Client};
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -67,7 +70,10 @@ impl UpscaleMachinery {
                 Resources::CronJob => {
                     Box::new(Api::<CronJob>::namespaced(c.clone(), &self.namespace))
                 }
-                Resources::Hpa => todo!(),
+                Resources::Hpa => Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                )),
             };
             Ok(rs.patch_resource(&self.name, &patch_object).await?)
         } else {

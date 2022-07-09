@@ -19,3 +19,5 @@ spec:
       # sets suspend = false
     - resource: CronJob
       jmespath: "metadata.name =='cronjob1'"
+    - resource: Hpa
+      jmespath: "metadata.name =='hpa1'"

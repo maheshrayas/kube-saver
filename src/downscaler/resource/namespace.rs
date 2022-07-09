@@ -1,6 +1,7 @@
 use crate::downscaler::{JMSExpression, Res};
 use crate::{Error, ResourceExtension};
 use async_trait::async_trait;
+use k8s_openapi::api::autoscaling::v2::HorizontalPodAutoscaler;
 use k8s_openapi::api::{
     apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob, core::v1::Namespace,
 };
@@ -27,8 +28,6 @@ impl JMSExpression for Namespace {}
 
 #[async_trait]
 impl<'a> Res for Nspace<'a> {
-    //TODO: logging
-    //TODO: proper error handling
     async fn downscale(&self, c: Client) -> Result<(), Error> {
         let api: Api<Namespace> = Api::all(c.clone());
         let namespaces = api.list(&Default::default()).await.unwrap();
@@ -36,22 +35,28 @@ impl<'a> Res for Nspace<'a> {
         for ns in namespaces.items {
             let result = ns.parse(self.expression).await?;
             if result {
+                let hpa_api: Api<HorizontalPodAutoscaler> =
+                    Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
+                hpa_api
+                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                    .await?;
+
                 let d_api: Api<Deployment> =
                     Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
                 d_api
-                    .processor_scaler_resource_items(self.replicas, c.clone(), self.is_uptime)
+                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
                     .await?;
 
                 let ss_api: Api<StatefulSet> =
                     Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
                 ss_api
-                    .processor_scaler_resource_items(self.replicas, c.clone(), self.is_uptime)
+                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
                     .await?;
 
-                let ss_api: Api<CronJob> =
+                let cj_api: Api<CronJob> =
                     Api::namespaced(c.clone(), ns.metadata.name.as_ref().unwrap());
-                ss_api
-                    .processor_scaler_resource_items(self.replicas, c.clone(), self.is_uptime)
+                cj_api
+                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
                     .await?;
             }
         }

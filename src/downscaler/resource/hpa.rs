@@ -63,24 +63,25 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
         Ok(())
     }
 
-    async fn processor_scaler_resource_items(
+    async fn processor_scale_ns_resource_items(
         &self,
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
     ) -> Result<(), Error> {
         let list = self.list(&Default::default()).await?;
-        // for item in list.items {
-        //     let pat = ScalingMachinery {
-        //         tobe_replicas: replicas,
-        //         original_replicas: "0".to_string(), // doesn't apply to cronjob
-        //         name: item.metadata.name.unwrap(),
-        //         namespace: item.metadata.namespace.unwrap(),
-        //         annotations: item.metadata.annotations,
-        //         resource_type: Resources::CronJob,
-        //     };
-        //     pat.scaling_machinery(c.clone(), is_uptime).await?;
-        // }
+        for item in list.items {
+            let original_count = (item.spec.unwrap().min_replicas.unwrap()).to_string();
+            let pat = ScalingMachinery {
+                tobe_replicas: replicas,
+                original_replicas: original_count,
+                name: item.metadata.name.unwrap(),
+                namespace: item.metadata.namespace.unwrap(),
+                annotations: item.metadata.annotations,
+                resource_type: Resources::Hpa,
+            };
+            pat.scaling_machinery(c.clone(), is_uptime).await?;
+        }
         Ok(())
     }
 
@@ -90,17 +91,17 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
         client: Client,
     ) -> Result<(), Error> {
         let hpa_list = self.list(&Default::default()).await.unwrap();
-        // for cj in &cj_list.items {
-        //     debug!("parsing cronjob resource {:?}", cj.metadata.name);
-        //     let u = UpscaleMachinery {
-        //         replicas,
-        //         name: cj.metadata.name.as_ref().unwrap().to_string(),
-        //         namespace: cj.metadata.namespace.as_ref().unwrap().to_string(),
-        //         annotations: cj.metadata.annotations.to_owned(),
-        //         resource_type: Resources::CronJob,
-        //     };
-        //     u.upscale_machinery(client.clone()).await?
-        // }
+        for cj in &hpa_list.items {
+            debug!("parsing hpa resource {:?}", cj.metadata.name);
+            let u = UpscaleMachinery {
+                replicas,
+                name: cj.metadata.name.as_ref().unwrap().to_string(),
+                namespace: cj.metadata.namespace.as_ref().unwrap().to_string(),
+                annotations: cj.metadata.annotations.to_owned(),
+                resource_type: Resources::Hpa,
+            };
+            u.upscale_machinery(client.clone()).await?
+        }
         Ok(())
     }
 }

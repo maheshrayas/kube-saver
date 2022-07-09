@@ -4,9 +4,7 @@ use crate::Error;
 use async_trait::async_trait;
 use k8s_openapi::api::{
     apps::v1::{Deployment, StatefulSet},
-    autoscaling::v2::HorizontalPodAutoscaler,
     batch::v1::CronJob,
-    core::v1::Namespace,
 };
 use kube::{
     api::{Patch, PatchParams},
@@ -56,8 +54,7 @@ pub trait Res {
 pub trait ResourceExtension: Send + Sync {
     async fn patch_resource(&self, name: &str, patch_value: &Value) -> Result<(), Error>;
     // method is implmented by downscaler aka processor
-    //TODO replicas to option<i32>
-    async fn processor_scaler_resource_items(
+    async fn processor_scale_ns_resource_items(
         &self,
         replicas: Option<i32>,
         client: Client,
@@ -79,7 +76,7 @@ impl ResourceExtension for Api<Deployment> {
         Ok(())
     }
 
-    async fn processor_scaler_resource_items(
+    async fn processor_scale_ns_resource_items(
         &self,
         replicas: Option<i32>,
         c: Client,
@@ -130,7 +127,7 @@ impl ResourceExtension for Api<StatefulSet> {
         Ok(())
     }
 
-    async fn processor_scaler_resource_items(
+    async fn processor_scale_ns_resource_items(
         &self,
         replicas: Option<i32>,
         c: Client,
@@ -181,7 +178,7 @@ impl ResourceExtension for Api<CronJob> {
         Ok(())
     }
 
-    async fn processor_scaler_resource_items(
+    async fn processor_scale_ns_resource_items(
         &self,
         replicas: Option<i32>,
         c: Client,

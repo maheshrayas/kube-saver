@@ -1,3 +1,4 @@
+use k8s_openapi::api::autoscaling::v2::HorizontalPodAutoscaler;
 use k8s_openapi::api::{
     apps::v1::{Deployment, StatefulSet},
     batch::v1::CronJob,
@@ -222,4 +223,28 @@ async fn test2_scaleup_scaleddownresource() {
     // kube-saver must scale down to 0
     let d = api.get("test-kuber8-deploy1").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(2));
+}
+
+#[tokio::test]
+async fn test4_hpa() {
+    let f = File::open("tests/rules/rules11.yaml").unwrap();
+    let r: Rules = serde_yaml::from_reader(f).unwrap();
+    let client = Client::try_default()
+        .await
+        .expect("Failed to read kubeconfig");
+    r.process_rules(client.clone()).await;
+    // kube-saver must set minReplicas =1 in the cronjob
+    let api: Api<HorizontalPodAutoscaler> = Api::namespaced(client.clone(), "kuber10");
+    let d = api.get("test-kuber10-hpa").await.unwrap();
+    assert_eq!(d.spec.unwrap().min_replicas, Some(1));
+    // HPA should scale down the respective Deployment to 1
+    assert_eq!(
+        d.metadata
+            .annotations
+            .as_ref()
+            .unwrap()
+            .get("kubesaver.com/is_downscaled")
+            .unwrap(),
+        "true"
+    );
 }

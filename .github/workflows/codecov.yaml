@@ -10,9 +10,8 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     steps:
-
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.2.0
+        uses: helm/kind-action@v1.3.0
 
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -30,8 +29,8 @@ jobs:
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: '0.15.0'
-          args: '-- --test-threads 1'
+          version: "0.15.0"
+          args: "-- --test-threads 1"
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1.0.2

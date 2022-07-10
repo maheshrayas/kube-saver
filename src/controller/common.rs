@@ -59,23 +59,29 @@ impl UpscaleMachinery {
             patch.insert("spec".to_string(), spec);
             let patch_object = Value::Object(patch);
 
-            let rs: Box<dyn ResourceExtension> = match self.resource_type {
-                Resources::Deployment => {
-                    Box::new(Api::<Deployment>::namespaced(c.clone(), &self.namespace))
-                }
-                Resources::StatefulSet => {
-                    Box::new(Api::<StatefulSet>::namespaced(c.clone(), &self.namespace))
-                }
-                Resources::Namespace => todo!(),
-                Resources::CronJob => {
-                    Box::new(Api::<CronJob>::namespaced(c.clone(), &self.namespace))
-                }
-                Resources::Hpa => Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
+            let rs: Option<Box<dyn ResourceExtension>> = match self.resource_type {
+                Resources::Deployment => Some(Box::new(Api::<Deployment>::namespaced(
                     c.clone(),
                     &self.namespace,
-                )),
+                ))),
+                Resources::StatefulSet => Some(Box::new(Api::<StatefulSet>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                ))),
+                Resources::CronJob => Some(Box::new(Api::<CronJob>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                ))),
+                Resources::Hpa => Some(Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                ))),
+                Resources::Namespace => None, //nothing to do
             };
-            Ok(rs.patch_resource(&self.name, &patch_object).await?)
+            match rs {
+                Some(rs) => rs.patch_resource(&self.name, &patch_object).await,
+                None => Ok(()),
+            }
         } else {
             // do nothing
             Ok(())

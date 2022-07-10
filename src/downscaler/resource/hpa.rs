@@ -6,7 +6,7 @@ use k8s_openapi::api::autoscaling::v2::HorizontalPodAutoscaler;
 use kube::api::{Patch, PatchParams};
 use kube::{client::Client, Api};
 use serde_json::Value;
-use tracing::debug;
+use tracing::{debug, info};
 
 use super::common::ScalingMachinery;
 
@@ -40,8 +40,16 @@ impl<'a> Res for Hpa<'a> {
             let result = item.parse(self.expression).await?;
             let original_count = (item.spec.unwrap().min_replicas.unwrap()).to_string();
             if result {
+                // if the replicas is set to 0 on the input resource type = 'Namespace', make sure Hpa cannot be set to 0
+                // Hence always set it to 1 and the dependent Deployment will be set to 0
+                let replicas = if let Some(0) = self.replicas {
+                    info!("hpa spec.minReplicas: Invalid value: 0: must be greater than or equal to 1,");
+                    Some(1)
+                } else {
+                    self.replicas
+                };
                 let pat = ScalingMachinery {
-                    tobe_replicas: self.replicas,
+                    tobe_replicas: replicas,
                     original_replicas: original_count,
                     name: item.metadata.name.unwrap(),
                     namespace: item.metadata.namespace.unwrap(),
@@ -72,6 +80,14 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
         let list = self.list(&Default::default()).await?;
         for item in list.items {
             let original_count = (item.spec.unwrap().min_replicas.unwrap()).to_string();
+            // if the replicas is set to 0 on the input resource type = 'Namespace', make sure Hpa cannot be set to 0
+            // Hence always set it to 1 and the dependent Deployment will be set to 0
+            let replicas = if let Some(0) = replicas {
+                Some(1)
+            } else {
+                replicas
+            };
+
             let pat = ScalingMachinery {
                 tobe_replicas: replicas,
                 original_replicas: original_count,
@@ -93,6 +109,12 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
         let hpa_list = self.list(&Default::default()).await.unwrap();
         for cj in &hpa_list.items {
             debug!("parsing hpa resource {:?}", cj.metadata.name);
+            // HPA minReplicas cannot be 0
+            let replicas = if let Some(0) = replicas {
+                Some(1)
+            } else {
+                replicas
+            };
             let u = UpscaleMachinery {
                 replicas,
                 name: cj.metadata.name.as_ref().unwrap().to_string(),

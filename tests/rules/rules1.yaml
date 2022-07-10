@@ -11,4 +11,3 @@ rules:
     resource:
       - Namespace
     replicas: 0
-

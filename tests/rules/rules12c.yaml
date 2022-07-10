@@ -1,0 +1,15 @@
+# Scale replicas to 1 with Hpa
+rules:
+  - id: rules-downscale-hpa-11
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney
+    jmespath: "metadata.name == 'test-kuber12c-hpa1'"
+    resource:
+      - hpa
+    replicas: 1
+  # Test if hpa minReplicas will be set 1 when the input replicas is set to 0
+  - id: rules-downscale-hpa-11
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney
+    jmespath: "metadata.name == 'test-kuber12c-hpa2'"
+    resource:
+      - hpa
+    replicas: 0

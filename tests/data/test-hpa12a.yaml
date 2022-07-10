@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kuber10
+  name: kuber12a
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: test-kuber10-deployment
-  namespace: kuber10
+  name: test-kuber12a-deployment
+  namespace: kuber12a
 spec:
   selector:
     matchLabels:
@@ -32,8 +32,8 @@ spec:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: test-kuber10-hpa
-  namespace: kuber10
+  name: test-kuber12a-hpa
+  namespace: kuber12a
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

@@ -116,25 +116,28 @@ impl ScalingMachinery {
         patch.insert("spec".to_string(), spec);
         let patch_object = Value::Object(patch);
 
-        let rs: Box<dyn ResourceExtension + Send + Sync> = match &self.resource_type {
-            Resources::Deployment => Box::new(Api::<Deployment>::namespaced(
+        let rs: Option<Box<dyn ResourceExtension + Send + Sync>> = match &self.resource_type {
+            Resources::Deployment => Some(Box::new(Api::<Deployment>::namespaced(
                 client.clone(),
                 &self.namespace,
-            )),
-            Resources::StatefulSet => Box::new(Api::<StatefulSet>::namespaced(
+            ))),
+            Resources::StatefulSet => Some(Box::new(Api::<StatefulSet>::namespaced(
                 client.clone(),
                 &self.namespace,
-            )),
-            Resources::CronJob => {
-                Box::new(Api::<CronJob>::namespaced(client.clone(), &self.namespace))
-            }
-            Resources::Namespace => todo!(),
-            Resources::Hpa => Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
+            ))),
+            Resources::CronJob => Some(Box::new(Api::<CronJob>::namespaced(
                 client.clone(),
                 &self.namespace,
-            )),
+            ))),
+            Resources::Namespace => None,
+            Resources::Hpa => Some(Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
+                client.clone(),
+                &self.namespace,
+            ))),
         };
-
-        rs.patch_resource(&self.name, &patch_object).await
+        match rs {
+            Some(rs) => rs.patch_resource(&self.name, &patch_object).await,
+            None => Ok(()),
+        }
     }
 }

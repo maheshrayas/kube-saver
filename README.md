@@ -9,7 +9,8 @@
 
 ## Motivation
 
-* Scale down cluster nodes by scaling down Deployments, StatefulSet during non-business hours and save $$, but if you need to scale back the resources eventhough its a scaledown, don't worry. You will have a Custom Resource which will scale up all resources and wont scale down until next scaledown period.
+* Scale down cluster nodes by scaling down Deployments, StatefulSet, CronJob, Hpa
+during non-business hours and save $$, but if you need to scale back the resources eventhough its a scaledown, don't worry, You will have a Custom Resource which will scale up all resources and wont scale down until next scaledown period.
 
 ## Installation
 
@@ -34,27 +35,45 @@ rules:
   # scale down deployment with name go-app-deployment-2 when current time/day not in uptime
   - id: rules-downscale-deployments
     uptime: Mon-Fri 09:00-17:00 Australia/Sydney
-    # https://jmespath.org/
     jmespath: "metadata.name == 'go-app-deployment-2'" 
     resource:
       - Deployment # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime 
-  # scale down all deployment & Statefulset in namespace kuber when current time/day not in uptime
+  # scale down all deployment, statefulset, cronjob, hpa in namespace kuber when current time/day not in uptime, in this case hpa will be set to 1 as the desired replicas is set as 0
   - id: rules-downscale-all-deployments-in-namespace
     uptime: Mon-Fri 09:00-17:00 Australia/Sydney
-    # https://jmespath.org/
     jmespath: "metadata.name == 'kuber'" 
     resource:
       - Namespace # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime 
   # scale down all statefulset in namespace kuber when current time/day not in uptime
-  - id: rules-downscale-all-deployments-in-namespace
+  - id: rules-downscale-all-statefulset
     uptime: Mon-Fri 09:00-17:00 Australia/Sydney
-    # https://jmespath.org/
     jmespath: "metadata.name == 'statefulset_name'" 
     resource:
       - StatefulSet # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime 
+  # disable all cronjob with the labels current time/day not in uptime
+  - id: rules-disable-all-cronjob
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    jmespath: "metadata.labels.app == 'some_random_app'" 
+    resource:
+      - cronjob # type of resource
+  # set minReplicas of HPA to 1
+  - id: rules-set-hpa
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    jmespath: "metadata.labels.app == 'some_random_app'" 
+    resource:
+      - hpa # type of resource
+    replicas:1
+  # set minReplicas of HPA to 1
+  - id: combination-of-resources
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    jmespath: "metadata.labels.app == 'some_random_app' || metadata.labels.service != 'some_random_service'" 
+    resource:
+      - Deployment # type of resource
+      - Statefulset
+    replicas:0
 
 ```
 
@@ -89,9 +108,7 @@ Choose any of the option below:
 | Kubernetes Provider |  Tested |
 |----------------------|--------|
 | Google Kubernetes Engine |   ✅   |
-| KIND                     |   ✅   |
-
-
+| KIND(no autoscaler)                 |   ✅   |
 
 ## Note
 

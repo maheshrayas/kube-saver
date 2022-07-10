@@ -1,5 +1,8 @@
 use crate::{Error, ResourceExtension, Resources};
-use k8s_openapi::api::{apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob};
+use k8s_openapi::api::{
+    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v2::HorizontalPodAutoscaler,
+    batch::v1::CronJob,
+};
 use kube::{Api, Client};
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -33,6 +36,12 @@ impl UpscaleMachinery {
                     );
                     json!({ "replicas": replicas })
                 }
+                Resources::Hpa => {
+                    let replicas = self
+                        .get_replicas(self.replicas, self.annotations.to_owned())
+                        .await;
+                    json!({ "minReplicas": replicas }) // minReplicas should >=1
+                }
 
                 Resources::CronJob => {
                     info!(
@@ -50,19 +59,29 @@ impl UpscaleMachinery {
             patch.insert("spec".to_string(), spec);
             let patch_object = Value::Object(patch);
 
-            let rs: Box<dyn ResourceExtension> = match self.resource_type {
-                Resources::Deployment => {
-                    Box::new(Api::<Deployment>::namespaced(c.clone(), &self.namespace))
-                }
-                Resources::StatefulSet => {
-                    Box::new(Api::<StatefulSet>::namespaced(c.clone(), &self.namespace))
-                }
-                Resources::Namespace => todo!(),
-                Resources::CronJob => {
-                    Box::new(Api::<CronJob>::namespaced(c.clone(), &self.namespace))
-                }
+            let rs: Option<Box<dyn ResourceExtension>> = match self.resource_type {
+                Resources::Deployment => Some(Box::new(Api::<Deployment>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                ))),
+                Resources::StatefulSet => Some(Box::new(Api::<StatefulSet>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                ))),
+                Resources::CronJob => Some(Box::new(Api::<CronJob>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                ))),
+                Resources::Hpa => Some(Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
+                    c.clone(),
+                    &self.namespace,
+                ))),
+                Resources::Namespace => None, //nothing to do
             };
-            Ok(rs.patch_resource(&self.name, &patch_object).await?)
+            match rs {
+                Some(rs) => rs.patch_resource(&self.name, &patch_object).await,
+                None => Ok(()),
+            }
         } else {
             // do nothing
             Ok(())

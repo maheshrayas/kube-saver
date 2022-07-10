@@ -1,0 +1,7 @@
+# Scale up all the resources replica to original for hpa
+rules:
+  - id: rules-downscale-hpa-11
+    uptime: Mon-Sun 00:00-23:59 Australia/Sydney # all up
+    jmespath: "metadata.name == 'kuber12'"
+    resource:
+      - Namespaces

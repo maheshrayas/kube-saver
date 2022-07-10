@@ -111,6 +111,9 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
                     Resources::CronJob => {
                         upscaler::enable_cronjob(client.clone(), &res.jmespath).await?
                     }
+                    Resources::Hpa => {
+                        upscaler::upscale_hpa(client.clone(), res.replicas, &res.jmespath).await?
+                    }
                 };
             }
             let api: Api<Upscaler> = Api::namespaced(client, &namespace);

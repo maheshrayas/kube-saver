@@ -1,0 +1,8 @@
+# upscale should scale back up to original replicas
+rules:
+  - id: rules-downscale-hpa-11
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney # mostof the time down
+    jmespath: "metadata.name == 'kuber12b'"
+    resource:
+      - Namespaces
+    replicas: 1

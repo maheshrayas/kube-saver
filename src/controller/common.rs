@@ -1,6 +1,6 @@
 use crate::{Error, ResourceExtension, Resources};
 use k8s_openapi::api::{
-    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v2::HorizontalPodAutoscaler,
+    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v1::HorizontalPodAutoscaler,
     batch::v1::CronJob,
 };
 use kube::{Api, Client};

@@ -2,7 +2,7 @@ use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::{JMSExpression, Res};
 use crate::{Error, ResourceExtension, Resources};
 use async_trait::async_trait;
-use k8s_openapi::api::autoscaling::v2::HorizontalPodAutoscaler;
+use k8s_openapi::api::autoscaling::v1::HorizontalPodAutoscaler;
 use kube::api::{Patch, PatchParams};
 use kube::{client::Client, Api};
 use serde_json::Value;

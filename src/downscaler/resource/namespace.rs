@@ -1,7 +1,7 @@
 use crate::downscaler::{JMSExpression, Res};
 use crate::{Error, ResourceExtension};
 use async_trait::async_trait;
-use k8s_openapi::api::autoscaling::v2::HorizontalPodAutoscaler;
+use k8s_openapi::api::autoscaling::v1::HorizontalPodAutoscaler;
 use k8s_openapi::api::{
     apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob, core::v1::Namespace,
 };

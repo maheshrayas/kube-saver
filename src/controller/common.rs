@@ -4,9 +4,9 @@ use k8s_openapi::api::{
     batch::v1::CronJob,
 };
 use kube::{Api, Client};
+use log::info;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
-use tracing::info;
 
 pub struct UpscaleMachinery {
     pub(crate) replicas: Option<i32>,

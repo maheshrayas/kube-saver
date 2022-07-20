@@ -5,12 +5,13 @@ use kube::{Resource, ResourceExt};
 use kube_runtime::controller::{Action, Controller};
 use kube_saver::controller::{finalizer, upscaler, Upscaler};
 use kube_saver::downscaler::processor::processor;
-use kube_saver::{init_logger, ContextData, Error, Resources};
+use kube_saver::init_logger;
+use kube_saver::{ContextData, Error, Resources};
+use log::error;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::error;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -29,14 +30,17 @@ struct KubeSaver {
 #[cfg(not(tarpaulin_include))]
 #[tokio::main]
 async fn main() {
-    init_logger();
     let cli = KubeSaver::parse();
     match cli.debug {
         1 => {
-            std::env::set_var("RUST_LOG", "debug");
+            std::env::set_var("RUST_LOG", "debug,kube_client=off,tower=off,hyper=off");
         }
-        _ => std::env::set_var("RUST_LOG", "info"),
+        _ => {
+            std::env::set_var("RUST_LOG", "info,kube_client=off");
+        }
     }
+    init_logger();
+
     let kubernetes_client: Client = Client::try_default()
         .await
         .expect("Expected a valid KUBECONFIG environment variable.");
@@ -90,7 +94,7 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
     // Performs action as decided by the `determine_action` function.
     match determine_action(&upscaler) {
         UpscalerAction::Create => {
-            let name = upscaler.name(); // Name of the Upscaler resource is used to name the subresources as well.
+            let name = upscaler.name_any(); // Name of the Upscaler resource is used to name the subresources as well.
             finalizer::add(client.clone(), &name, &namespace).await?;
             // Invoke creation of a Kubernetes built-in resource named deployment with `n` Upscaler service pods.
             // loop thru the scale
@@ -118,13 +122,12 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
             }
             let api: Api<Upscaler> = Api::namespaced(client, &namespace);
             // delete the upscaler resource after creation as there is no use
-            api.delete(&upscaler.name(), &DeleteParams::default())
-                .await?;
+            api.delete(&name, &DeleteParams::default()).await?;
             Ok(Action::requeue(Duration::from_secs(10)))
         }
         UpscalerAction::Delete => {
             // for Kubernetes to delete the `Upscaler` resource.
-            finalizer::delete(client, &upscaler.name(), &namespace).await?;
+            finalizer::delete(client, &upscaler.name_any(), &namespace).await?;
             Ok(Action::await_change())
         }
         // The resource is already in desired state, do nothing and re-check after 10 seconds

@@ -1,13 +1,14 @@
 use chrono_tz::Tz;
-use env_logger::{Builder, Env};
+use env_logger::Env;
+use k8s_openapi::chrono::Local;
 use k8s_openapi::chrono::{DateTime, Datelike, TimeZone, Utc};
 use kube::Client;
+use log::debug;
 use regex::Captures;
 use std::io::Write;
 use std::num::ParseIntError;
 use std::process::exit;
 use std::str::FromStr;
-use tracing::*;
 
 pub fn current_day(day: &str) -> u32 {
     match day {
@@ -23,21 +24,17 @@ pub fn current_day(day: &str) -> u32 {
 }
 
 pub fn init_logger() {
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info,kube_client=off");
-    }
-    let env = Env::default()
-        .filter("RUST_LOG")
-        .write_style("MY_LOG_STYLE");
+    let env = Env::default().filter("RUST_LOG");
 
-    Builder::from_env(env)
+    env_logger::Builder::from_env(env)
         .format(|buf, record| {
-            let style = buf.style();
-            // style.set_bg(Color::Yellow).set_bold(true);
-
-            let timestamp = buf.timestamp();
-
-            writeln!(buf, "{}: {}", timestamp, style.value(record.args()))
+            writeln!(
+                buf,
+                "{} {}: {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                record.level(),
+                record.args()
+            )
         })
         .init();
 }
@@ -118,4 +115,9 @@ impl ContextData {
     pub fn new(client: Client) -> Self {
         ContextData { client }
     }
+}
+
+#[test]
+fn test_init_logger() {
+    init_logger();
 }

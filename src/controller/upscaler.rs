@@ -6,7 +6,7 @@ use k8s_openapi::api::{
     apps::v1::Deployment, apps::v1::StatefulSet, batch::v1::CronJob, core::v1::Namespace,
 };
 use kube::{Api, Client};
-use tracing::debug;
+use log::debug;
 
 /// Upscale the deploy Resource when CustomResource Upscaler is applied to cluster
 pub async fn upscale_deploy(

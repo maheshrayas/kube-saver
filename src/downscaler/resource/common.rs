@@ -4,9 +4,9 @@ use k8s_openapi::api::{
     batch::v1::CronJob,
 };
 use kube::{client::Client, Api};
+use log::info;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
-use tracing::info;
 
 pub struct ScalingMachinery {
     pub(crate) tobe_replicas: Option<i32>,
@@ -30,7 +30,7 @@ impl ScalingMachinery {
                     .is_none()
             {
                 // first time action
-                info!("downscaling {} {}", &self.resource_type, &self.name,);
+                info!("downscaling {} : {}", &self.resource_type, &self.name,);
                 self.patching(
                     c.clone(),
                     &self.original_replicas,
@@ -46,7 +46,7 @@ impl ScalingMachinery {
             {
                 // if the resources are already upscaled by the kube-saver and now its the time to be downscaled
                 if x == "false" {
-                    info!("downscaling {} {}", &self.resource_type, &self.name);
+                    info!("downscaling {} : {}", &self.resource_type, &self.name);
                     self.patching(
                         c.clone(),
                         &self.original_replicas,
@@ -68,7 +68,7 @@ impl ScalingMachinery {
                     .parse()
                     .unwrap();
                 if x == "true" {
-                    info!("upscaling {} ", &self.name);
+                    info!("upscaling {} : {} ", &self.resource_type, &self.name);
                     // this is needed becoz the next day I want to downscale after the end time
                     self.patching(
                         c.clone(),

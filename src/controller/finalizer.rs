@@ -1,8 +1,8 @@
 use crate::controller::Upscaler;
 use kube::api::{Patch, PatchParams};
 use kube::{Api, Client, Error};
+use log::info;
 use serde_json::{json, Value};
-use tracing::info;
 
 /// Adds a finalizer record into an `Upscaler` kind of resource. If the finalizer already exists,
 /// this action has no effect.

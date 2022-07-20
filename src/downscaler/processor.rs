@@ -7,11 +7,11 @@ use crate::resource::statefulset::StateSet;
 use crate::{is_uptime, Error};
 use core::time;
 use kube::Client;
+use log::{debug, error, info};
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use regex::Regex;
 use std::{fs::File, str::FromStr};
-use tracing::{debug, error, info};
 
 #[cfg(not(tarpaulin_include))]
 pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {

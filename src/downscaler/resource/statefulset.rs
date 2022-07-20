@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::api::{Patch, PatchParams};
 use kube::{Api, Client};
+use log::debug;
 use serde_json::Value;
-use tracing::debug;
 
 use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::Res;
@@ -58,6 +58,7 @@ impl Res for StateSet<'_> {
 #[async_trait]
 impl ResourceExtension for Api<StatefulSet> {
     async fn patch_resource(&self, name: &str, patch_value: &Value) -> Result<(), Error> {
+        debug!("patching statefulset: {}", name);
         self.patch(name, &PatchParams::default(), &Patch::Merge(patch_value))
             .await?;
         Ok(())
@@ -71,12 +72,18 @@ impl ResourceExtension for Api<StatefulSet> {
     ) -> Result<(), Error> {
         let list = self.list(&Default::default()).await?;
         for item in list.items {
+            let name = item.metadata.name.unwrap();
+            let namespace = item.metadata.namespace.unwrap();
+            debug!(
+                "Parsing statefulset {} since its in namespace {:?}",
+                name, namespace
+            );
             let original_count = (item.spec.unwrap().replicas.unwrap()).to_string();
             let pat = ScalingMachinery {
                 tobe_replicas: replicas,
                 original_replicas: original_count,
-                name: item.metadata.name.unwrap(),
-                namespace: item.metadata.namespace.unwrap(),
+                name,
+                namespace,
                 annotations: item.metadata.annotations,
                 resource_type: Resources::StatefulSet,
             };
@@ -92,7 +99,7 @@ impl ResourceExtension for Api<StatefulSet> {
     ) -> Result<(), Error> {
         let ss_list = self.list(&Default::default()).await.unwrap();
         for ss in &ss_list.items {
-            debug!("parsing deployment resource {:?}", ss.metadata.name);
+            debug!("parsing statefulset resource {:?}", ss.metadata.name);
             let u = UpscaleMachinery {
                 replicas,
                 name: ss.metadata.name.as_ref().unwrap().to_string(),

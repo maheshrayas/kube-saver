@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use k8s_openapi::api::autoscaling::v1::HorizontalPodAutoscaler;
 use kube::api::{Patch, PatchParams};
 use kube::{client::Client, Api};
+use log::{debug, info};
 use serde_json::Value;
-use tracing::{debug, info};
 
 use super::common::ScalingMachinery;
 
@@ -79,6 +79,12 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
     ) -> Result<(), Error> {
         let list = self.list(&Default::default()).await?;
         for item in list.items {
+            let name = item.metadata.name.unwrap();
+            let namespace = item.metadata.namespace.unwrap();
+            debug!(
+                "Parsing hpa {} since its in namespace {:?}",
+                name, namespace
+            );
             let original_count = (item.spec.unwrap().min_replicas.unwrap()).to_string();
             // if the replicas is set to 0 on the input resource type = 'Namespace', make sure Hpa cannot be set to 0
             // Hence always set it to 1 and the dependent Deployment will be set to 0
@@ -91,8 +97,8 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
             let pat = ScalingMachinery {
                 tobe_replicas: replicas,
                 original_replicas: original_count,
-                name: item.metadata.name.unwrap(),
-                namespace: item.metadata.namespace.unwrap(),
+                name,
+                namespace,
                 annotations: item.metadata.annotations,
                 resource_type: Resources::Hpa,
             };

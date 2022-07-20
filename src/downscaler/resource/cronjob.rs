@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use k8s_openapi::api::batch::v1::CronJob;
 use kube::api::{Patch, PatchParams};
 use kube::{client::Client, Api};
+use log::debug;
 use serde_json::Value;
-use tracing::debug;
 
 use super::common::ScalingMachinery;
 
@@ -54,6 +54,7 @@ impl<'a> Res for CJob<'a> {
 #[async_trait]
 impl ResourceExtension for Api<CronJob> {
     async fn patch_resource(&self, name: &str, patch_value: &Value) -> Result<(), Error> {
+        debug!("patching cronjob resource {:?}", name);
         self.patch(name, &PatchParams::default(), &Patch::Merge(patch_value))
             .await?;
         Ok(())
@@ -67,11 +68,17 @@ impl ResourceExtension for Api<CronJob> {
     ) -> Result<(), Error> {
         let list = self.list(&Default::default()).await?;
         for item in list.items {
+            let name = item.metadata.name.unwrap();
+            let namespace = item.metadata.namespace.unwrap();
+            debug!(
+                "Parsing cronjob {} since its in namespace {:?}",
+                name, namespace
+            );
             let pat = ScalingMachinery {
                 tobe_replicas: replicas,
                 original_replicas: "0".to_string(), // doesn't apply to cronjob
-                name: item.metadata.name.unwrap(),
-                namespace: item.metadata.namespace.unwrap(),
+                name,
+                namespace,
                 annotations: item.metadata.annotations,
                 resource_type: Resources::CronJob,
             };

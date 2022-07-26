@@ -17,7 +17,7 @@ pub struct UpscalerSpec {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, JsonSchema)]
 pub struct Resource {
-    pub resource: String,
+    pub resource: Vec<String>,
     pub jmespath: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replicas: Option<i32>,

@@ -9,7 +9,6 @@ use kube_saver::init_logger;
 use kube_saver::{ContextData, Error, Resources};
 use log::error;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::time::Duration;
 
@@ -80,6 +79,8 @@ enum UpscalerAction {
 
 #[cfg(not(tarpaulin_include))]
 async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result<Action, Error> {
+    use kube_saver::check_input_resource;
+
     let client: Client = context.client.clone();
     let namespace: String = match upscaler.namespace() {
         None => {
@@ -99,26 +100,41 @@ async fn reconcile(upscaler: Arc<Upscaler>, context: Arc<ContextData>) -> Result
             // Invoke creation of a Kubernetes built-in resource named deployment with `n` Upscaler service pods.
             // loop thru the scale
             for res in &upscaler.spec.scale {
-                let f = Resources::from_str(&res.resource).unwrap();
-                match f {
-                    Resources::Deployment => {
-                        upscaler::upscale_deploy(client.clone(), res.replicas, &res.jmespath)
-                            .await?
+                // for each resources in spec
+                for r in &res.resource {
+                    let f = check_input_resource(r);
+                    if f.is_some() {
+                        match f.unwrap() {
+                            Resources::Deployment => {
+                                upscaler::upscale_deploy(
+                                    client.clone(),
+                                    res.replicas,
+                                    &res.jmespath,
+                                )
+                                .await?
+                            }
+                            Resources::StatefulSet => {
+                                upscaler::upscale_statefulset(
+                                    client.clone(),
+                                    res.replicas,
+                                    &res.jmespath,
+                                )
+                                .await?
+                            }
+                            Resources::Namespace => {
+                                upscaler::upscale_ns(client.clone(), res.replicas, &res.jmespath)
+                                    .await?
+                            }
+                            Resources::CronJob => {
+                                upscaler::enable_cronjob(client.clone(), &res.jmespath).await?
+                            }
+                            Resources::Hpa => {
+                                upscaler::upscale_hpa(client.clone(), res.replicas, &res.jmespath)
+                                    .await?
+                            }
+                        };
                     }
-                    Resources::StatefulSet => {
-                        upscaler::upscale_statefulset(client.clone(), res.replicas, &res.jmespath)
-                            .await?
-                    }
-                    Resources::Namespace => {
-                        upscaler::upscale_ns(client.clone(), res.replicas, &res.jmespath).await?
-                    }
-                    Resources::CronJob => {
-                        upscaler::enable_cronjob(client.clone(), &res.jmespath).await?
-                    }
-                    Resources::Hpa => {
-                        upscaler::upscale_hpa(client.clone(), res.replicas, &res.jmespath).await?
-                    }
-                };
+                }
             }
             let api: Api<Upscaler> = Api::namespaced(client, &namespace);
             // delete the upscaler resource after creation as there is no use

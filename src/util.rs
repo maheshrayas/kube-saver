@@ -3,12 +3,14 @@ use env_logger::Env;
 use k8s_openapi::chrono::Local;
 use k8s_openapi::chrono::{DateTime, Datelike, TimeZone, Utc};
 use kube::Client;
-use log::debug;
+use log::{debug, error};
 use regex::Captures;
 use std::io::Write;
 use std::num::ParseIntError;
 use std::process::exit;
 use std::str::FromStr;
+
+use crate::Resources;
 
 pub fn current_day(day: &str) -> u32 {
     match day {
@@ -81,6 +83,18 @@ pub fn is_uptime(m: Captures) -> Result<bool, Error> {
     }
 }
 
+pub fn check_input_resource(r: &str) -> Option<Resources> {
+    match Resources::from_str(r) {
+        Ok(r) => Some(r),
+        Err(err) => {
+            // Supported Resource only Deployment, StatefulSet, Namespace, Cronjob, hpa
+            error!("{err}");
+            // if any one Resource is invalid, dont exit nonzero rather Return None and continue for next rule
+            None
+        }
+    }
+}
+
 /// All errors possible to occur during reconciliation
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -120,4 +134,38 @@ impl ContextData {
 #[test]
 fn test_init_logger() {
     init_logger();
+}
+#[test]
+fn test_input_resource_deployment() {
+    let f = check_input_resource("deployment");
+    assert_eq!(f, Some(Resources::Deployment));
+}
+#[test]
+fn test_input_resource_hpa() {
+    let f = check_input_resource("hpa");
+    assert_eq!(f, Some(Resources::Hpa));
+}
+
+#[test]
+fn test_input_resource_cronjob() {
+    let f = check_input_resource("cronjob");
+    assert_eq!(f, Some(Resources::CronJob));
+}
+
+#[test]
+fn test_input_resource_statefulset() {
+    let f = check_input_resource("statefulset");
+    assert_eq!(f, Some(Resources::StatefulSet));
+}
+
+#[test]
+fn test_input_resource_namespace() {
+    let f = check_input_resource("namespace");
+    assert_eq!(f, Some(Resources::Namespace));
+}
+
+#[test]
+fn test_input_resource_unsupported() {
+    let f = check_input_resource("pod");
+    assert_eq!(f, None);
 }

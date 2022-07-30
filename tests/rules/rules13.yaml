@@ -1,0 +1,12 @@
+# Rules used in upscaler.rs/test6_check_if_upscales
+# Rules scale down all the resources which has metadata.name.env =='sit' && metadata.name.version !='v2'
+rules:
+  - id: rules-downscale-kuber13
+    uptime: Mon-Sun 22:59-23:00 Australia/Sydney
+    jmespath: "metadata.labels.env =='sit' && metadata.labels.version !='v2'"
+    resource:
+      - cronjob
+      - deployment
+      - statefulset
+      - hpa
+    replicas: 0

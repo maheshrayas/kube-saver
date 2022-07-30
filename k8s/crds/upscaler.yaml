@@ -1,23 +1,33 @@
 apiVersion: kubesaver.com/v1
 kind: Upscaler
 metadata:
-  name: upscaler--resources
-  namespace: kube-saver
+  name: upscaler-resources
+  namespace: kuber1
 spec:
   scale:
     # upscale all deployment in namespace kuber to original count which was downscaled by kube-saver
-    - resource: Namespace
+    - resource:
+        - Namespace
       jmespath: "metadata.name =='kuber'"
     # upscale deployment go-app-deployment to original count which was downscaled by kube-saver
-    - resource: Deployment
+    - resource:
+        - Deployment
       jmespath: "metadata.name =='go-app-deployment1' || metadata.name =='go-app-deployment2'"
       replicas: 100 # not a mandatory, if not defined, the number of replicas will be original count
       # upscale deployment go-app-deployment to original count which was downscaled by kube-saver
-    - resource: StatefulSet
+    - resource:
+        - StatefulSet
       jmespath: "metadata.name =='web'"
       replicas: 2 # not a mandatory, if not defined, the number of replicas will be original count
       # sets suspend = false
-    - resource: CronJob
+    - resource:
+        - CronJob
       jmespath: "metadata.name =='cronjob1'"
-    - resource: Hpa
+    - resource:
+        - Hpa
       jmespath: "metadata.name =='hpa1'"
+    - resource: # scale up Deployment, statefulset & cronjon who metadata.name.env =='sit' && metadata.name.version !='v2'
+        - Deployment
+        - Statefulset
+        - Cronjob
+      jmespath: "metadata.name.env =='sit' && metadata.name.version !='v2'"

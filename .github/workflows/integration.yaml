@@ -1,0 +1,31 @@
+name: integration
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  integration:
+    name: integration test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.3.0
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: deploy test resources
+        run: |
+          ./tests/deploy.sh
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: cluster

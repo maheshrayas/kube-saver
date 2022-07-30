@@ -4,14 +4,14 @@ use crate::resource::deployment::Deploy;
 use crate::resource::hpa::Hpa;
 use crate::resource::namespace::Nspace;
 use crate::resource::statefulset::StateSet;
-use crate::{is_uptime, Error};
+use crate::{check_input_resource, is_uptime, Error};
 use core::time;
 use kube::Client;
 use log::{debug, error, info};
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use regex::Regex;
-use std::{fs::File, str::FromStr};
+use std::fs::File;
 
 #[cfg(not(tarpaulin_include))]
 pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
@@ -57,16 +57,7 @@ impl Rules {
             debug!("uptime for rule id {} is currently {}", e.uptime, is_uptime);
             // for each resource in rules.yaml
             for r in &e.resource {
-                let f = match Resources::from_str(r) {
-                    Ok(r) => Some(r),
-                    Err(err) => {
-                        // Supported Resource only Deployment, StatefulSet, Namespace
-                        error!("{err}");
-                        // if any one Resource is invalid, dont exit nonzero rather Return None and continue for next rule
-                        None
-                    }
-                };
-
+                let f = check_input_resource(r);
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
                     match f.unwrap() {

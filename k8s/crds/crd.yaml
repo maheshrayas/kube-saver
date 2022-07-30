@@ -18,6 +18,7 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          description: Upscale scaled downed resources
           properties:
             spec:
               type: object
@@ -27,11 +28,19 @@ spec:
                     type: object
                     properties:
                       resource:
-                        type: string
+                        type: array
+                        description:
+                          Supported resources -  Namespace, Deployment, Statefulset, Cronjob, hpa.
+                          if Resources is defined as Namespace, the Custom resource will look for Deployment, Statefulset, Cronjob, hpa
+                          defined in the jmespath
+                        items:
+                          type: string
                       replicas:
                         type: integer
+                        description: Nonmadatory, if not defined, the Controller will upscale to the number of replicas before scaled down
                         format: int32
                       jmespath:
                         type: string
+                        description: `https://jmespath.org/` , use to select the resources based on manifest filter.
                     required: ["jmespath", "resource"]
                   type: array

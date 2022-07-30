@@ -26,8 +26,8 @@ spec:
     - resource:
         - Hpa
       jmespath: "metadata.name =='hpa1'"
-    - resource: # scale up Deployment, statefulset & cronjon who metadata.name.env =='sit' && metadata.name.version !='v2'
+    - resource: # scale up Deployment, statefulset & cronjon who metadata.labels.env =='sit' && metadata.labels.version !='v2'
         - Deployment
         - Statefulset
         - Cronjob
-      jmespath: "metadata.name.env =='sit' && metadata.name.version !='v2'"
+      jmespath: "metadata.labels.env =='sit' && metadata.labels.version !='v2'"

@@ -31,13 +31,13 @@ spec:
                         type: array
                         description:
                           Supported resources -  Namespace, Deployment, Statefulset, Cronjob, hpa.
-                          if Resources is defined as Namespace, the Custom resource will look for Deployment, Statefulset, Cronjob, hpa
+                          if resources is defined as Namespace, the Custom resource will look for Deployment, Statefulset, Cronjob, hpa
                           defined in the jmespath
                         items:
                           type: string
                       replicas:
                         type: integer
-                        description: Nonmadatory, if not defined, the Controller will upscale to the number of replicas before scaled down
+                        description: Non mandatory, if not defined, the Controller will upscale to the number of replicas before scaled down replicas
                         format: int32
                       jmespath:
                         type: string

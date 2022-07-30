@@ -3,12 +3,13 @@ use k8s_openapi::api::{
     apps::v1::{Deployment, StatefulSet},
     batch::v1::CronJob,
 };
-use kube::{Api, Client};
 use kube_saver::controller::upscaler::{
     enable_cronjob, upscale_deploy, upscale_hpa, upscale_ns, upscale_statefulset,
 };
 use kube_saver::Rules;
 use std::fs::File;
+
+use kube::{api::Api, Client};
 
 #[tokio::test]
 async fn test4_apply_upscaler_on_downscaled_for_deployment() {

@@ -1,6 +1,6 @@
 [package]
 name = "kube-saver"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,7 +17,7 @@ futures = "~0.3"
 # All serde dependencies are used to serialize/deserialize CRDs and other Kubernetes-related structs
 serde = "~1.0"
 serde_json = "~1.0"
-serde_yaml = "0.8.24"
+serde_yaml = "0.9.1"
 schemars = "~0.8"
 thiserror = "~1.0" # Custom Error definitions and convenient error mappings
 yaml-rust = "0.4.5"
@@ -32,3 +32,4 @@ openssl-src = "300.0.6"
 
 [dev-dependencies]
 pretty_assertions = "1"
+anyhow="1.0"

@@ -110,7 +110,3 @@ Choose any of the option below:
 |----------------------|--------|
 | Google Kubernetes Engine |   ✅   |
 | KIND(no autoscaler)                 |   ✅   |
-
-## Note
-
-This project is under development expect changes.

@@ -1,5 +1,5 @@
 use crate::controller::{finalizer, upscaler, Upscaler};
-use crate::{ContextData, Error, Resources};
+use crate::util::{ContextData, Error};
 use kube::{Resource, ResourceExt};
 use kube_runtime::controller::Action;
 use log::error;
@@ -31,7 +31,7 @@ pub async fn reconcile(
 ) -> Result<Action, Error> {
     use kube::{api::DeleteParams, Api, Client};
 
-    use crate::check_input_resource;
+    use crate::{downscaler::Resources, util::check_input_resource};
 
     let client: Client = context.client.clone();
     let namespace: String = match upscaler.namespace() {

@@ -1,10 +1,8 @@
+use crate::downscaler::resource::{
+    cronjob::CJob, deployment::Deploy, hpa::Hpa, namespace::Nspace, statefulset::StateSet,
+};
 use crate::downscaler::{Res, Resources, Rule, Rules};
-use crate::resource::cronjob::CJob;
-use crate::resource::deployment::Deploy;
-use crate::resource::hpa::Hpa;
-use crate::resource::namespace::Nspace;
-use crate::resource::statefulset::StateSet;
-use crate::{check_input_resource, is_uptime, Error};
+use crate::util::{check_input_resource, is_uptime, Error};
 use core::time;
 use kube::Client;
 use log::{debug, error, info};

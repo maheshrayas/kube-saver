@@ -10,7 +10,7 @@ use std::num::ParseIntError;
 use std::process::exit;
 use std::str::FromStr;
 
-use crate::Resources;
+use crate::downscaler::Resources;
 
 pub fn current_day(day: &str) -> u32 {
     match day {

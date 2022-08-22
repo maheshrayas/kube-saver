@@ -7,7 +7,8 @@ use serde_json::Value;
 
 use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::Res;
-use crate::{Error, JMSExpression, ResourceExtension, Resources};
+use crate::downscaler::{JMSExpression, ResourceExtension, Resources};
+use crate::util::Error;
 
 use super::common::ScalingMachinery;
 

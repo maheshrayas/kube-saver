@@ -7,7 +7,6 @@ use k8s_openapi::api::{
 
 use anyhow::Result;
 use kube::{api::Api, Client};
-use kube_saver::Rules;
 use std::fs::File;
 
 #[tokio::test]
@@ -15,7 +14,7 @@ use std::fs::File;
 async fn test6_check_if_upscales() -> Result<()> {
     // First downscale all the resources with specific jmespath
     let f = File::open("tests/rules/rules13.yaml").unwrap();
-    let r: Rules = serde_yaml::from_reader(f).unwrap();
+    let r: kube_saver::downscaler::Rules = serde_yaml::from_reader(f).unwrap();
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");

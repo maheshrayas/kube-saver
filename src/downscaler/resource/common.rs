@@ -1,4 +1,3 @@
-use crate::{Error, ResourceExtension, Resources};
 use k8s_openapi::api::{
     apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v1::HorizontalPodAutoscaler,
     batch::v1::CronJob,
@@ -7,6 +6,11 @@ use kube::{client::Client, Api};
 use log::info;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
+
+use crate::{
+    downscaler::{ResourceExtension, Resources},
+    util::Error,
+};
 
 pub struct ScalingMachinery {
     pub(crate) tobe_replicas: Option<i32>,

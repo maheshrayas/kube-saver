@@ -5,7 +5,7 @@ use k8s_openapi::api::{
     batch::v1::CronJob,
 };
 use kube::{Api, Client};
-use kube_saver::Rules;
+use kube_saver::downscaler::Rules;
 use std::fs::File;
 
 #[tokio::test]

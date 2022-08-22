@@ -5,7 +5,6 @@ use kube_runtime::controller::Controller;
 use kube_saver::{
     controller::watcher::{on_error, reconcile},
     downscaler::processor::processor,
-    init_logger, ContextData,
 };
 use log::error;
 use std::sync::Arc;
@@ -36,14 +35,16 @@ async fn main() {
             std::env::set_var("RUST_LOG", "info,kube_client=off");
         }
     }
-    init_logger();
+    kube_saver::util::init_logger();
 
     let kubernetes_client: Client = Client::try_default()
         .await
         .expect("Expected a valid KUBECONFIG environment variable.");
 
     let crd_api: Api<kube_saver::controller::Upscaler> = Api::all(kubernetes_client.clone());
-    let context: Arc<ContextData> = Arc::new(ContextData::new(kubernetes_client.clone()));
+    let context: Arc<kube_saver::util::ContextData> = Arc::new(kube_saver::util::ContextData::new(
+        kubernetes_client.clone(),
+    ));
 
     let controller = Controller::new(crd_api.clone(), ListParams::default())
         .run(reconcile, on_error, context)

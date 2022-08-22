@@ -6,7 +6,7 @@ use k8s_openapi::api::{
 use kube_saver::controller::upscaler::{
     enable_cronjob, upscale_deploy, upscale_hpa, upscale_ns, upscale_statefulset,
 };
-use kube_saver::Rules;
+use kube_saver::downscaler::Rules;
 use std::fs::File;
 
 use kube::{api::Api, Client};

@@ -18,10 +18,11 @@ spec:
       serviceAccountName: kube-saver
       containers:
         - name: kube-saver-operator
-          image: maheshrayas/kube-saver:v0.5.0
+          image: maheshrayas/kube-saver:v0.6.0
           args:
-            - "--interval=60"
-            - "--debug"
+            - "--rules=/config/rules.yaml" #rules for downscale
+            - "--interval=60" # every 60 secs, the controller will check the resources to downscale or upscale
+            - "--debug" # remove to set log as INFO
           resources:
             limits:
               cpu: "1"

@@ -41,6 +41,6 @@ spec:
                         format: int32
                       jmespath:
                         type: string
-                        description: `https://jmespath.org/` , use to select the resources based on manifest filter.
+                        description: https://jmespath.org/, use to select the resources based on manifest filter.
                     required: ["jmespath", "resource"]
                   type: array

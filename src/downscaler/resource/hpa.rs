@@ -1,5 +1,5 @@
 use crate::controller::common::UpscaleMachinery;
-use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources};
+use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources, ScaledResources};
 use crate::util::Error;
 use async_trait::async_trait;
 use k8s_openapi::api::autoscaling::v1::HorizontalPodAutoscaler;
@@ -31,10 +31,10 @@ impl<'a> Hpa<'a> {
 
 #[async_trait]
 impl<'a> Res for Hpa<'a> {
-    async fn downscale(&self, c: Client) -> Result<(), Error> {
+    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<HorizontalPodAutoscaler> = Api::all(c.clone());
         let list = api.list(&Default::default()).await.unwrap();
-
+        let mut list_hpa: Vec<ScaledResources> = vec![];
         // TODO: Multiple threads
         for item in list.items {
             let result = item.parse(self.expression).await?;
@@ -42,6 +42,9 @@ impl<'a> Res for Hpa<'a> {
             if result {
                 // if the replicas is set to 0 on the input resource type = 'Namespace', make sure Hpa cannot be set to 0
                 // Hence always set it to 1 and the dependent Deployment will be set to 0
+                let name = item.metadata.name.unwrap();
+                let namespace: String = item.metadata.namespace.unwrap();
+
                 let replicas = if let Some(0) = self.replicas {
                     info!("hpa spec.minReplicas: Invalid value: 0: must be greater than or equal to 1,");
                     Some(1)
@@ -51,15 +54,17 @@ impl<'a> Res for Hpa<'a> {
                 let pat = ScalingMachinery {
                     tobe_replicas: replicas,
                     original_replicas: original_count,
-                    name: item.metadata.name.unwrap(),
-                    namespace: item.metadata.namespace.unwrap(),
+                    name,
+                    namespace,
                     annotations: item.metadata.annotations,
                     resource_type: Resources::Hpa,
                 };
-                pat.scaling_machinery(c.clone(), self.is_uptime).await?;
+                if let Some(scaled_res) = pat.scaling_machinery(c.clone(), self.is_uptime).await? {
+                    list_hpa.push(scaled_res);
+                };
             }
         }
-        Ok(())
+        Ok(list_hpa)
     }
 }
 
@@ -76,8 +81,9 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<ScaledResources>, Error> {
         let list = self.list(&Default::default()).await?;
+        let mut list_hpa: Vec<ScaledResources> = vec![];
         for item in list.items {
             let name = item.metadata.name.unwrap();
             let namespace = item.metadata.namespace.unwrap();
@@ -102,9 +108,11 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
                 annotations: item.metadata.annotations,
                 resource_type: Resources::Hpa,
             };
-            pat.scaling_machinery(c.clone(), is_uptime).await?;
+            if let Some(scaled_res) = pat.scaling_machinery(c.clone(), is_uptime).await? {
+                list_hpa.push(scaled_res);
+            };
         }
-        Ok(())
+        Ok(list_hpa)
     }
 
     async fn controller_upscale_resource_items(

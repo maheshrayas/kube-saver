@@ -1,15 +1,11 @@
-use k8s_openapi::api::{
-    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v1::HorizontalPodAutoscaler,
-    batch::v1::CronJob,
-};
-use kube::{client::Client, Api};
+use kube::client::Client;
 use log::info;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 
 use crate::{
-    downscaler::{ResourceExtension, Resources},
-    util::Error,
+    downscaler::{Resources, ScaledResources},
+    util::{dynamic_resource_type, Error},
 };
 
 pub struct ScalingMachinery {
@@ -22,7 +18,11 @@ pub struct ScalingMachinery {
 }
 
 impl ScalingMachinery {
-    pub async fn scaling_machinery(&self, c: Client, is_uptime: bool) -> Result<(), Error> {
+    pub async fn scaling_machinery(
+        &self,
+        c: Client,
+        is_uptime: bool,
+    ) -> Result<Option<ScaledResources>, Error> {
         if !is_uptime {
             // check if the resource has annotations
             if self.annotations.is_none()
@@ -35,13 +35,15 @@ impl ScalingMachinery {
             {
                 // first time action
                 info!("downscaling {} : {}", &self.resource_type, &self.name,);
-                self.patching(
-                    c.clone(),
-                    &self.original_replicas,
-                    self.tobe_replicas,
-                    "true",
-                )
-                .await?;
+                return Ok(Some(
+                    self.patching(
+                        c.clone(),
+                        &self.original_replicas,
+                        self.tobe_replicas,
+                        "true",
+                    )
+                    .await?,
+                ));
             } else if let Some(x) = self
                 .annotations
                 .as_ref()
@@ -51,13 +53,15 @@ impl ScalingMachinery {
                 // if the resources are already upscaled by the kube-saver and now its the time to be downscaled
                 if x == "false" {
                     info!("downscaling {} : {}", &self.resource_type, &self.name);
-                    self.patching(
-                        c.clone(),
-                        &self.original_replicas,
-                        self.tobe_replicas,
-                        "true",
-                    )
-                    .await?;
+                    return Ok(Some(
+                        self.patching(
+                            c.clone(),
+                            &self.original_replicas,
+                            self.tobe_replicas,
+                            "true",
+                        )
+                        .await?,
+                    ));
                 }
             }
         } else {
@@ -74,17 +78,19 @@ impl ScalingMachinery {
                 if x == "true" {
                     info!("upscaling {} : {} ", &self.resource_type, &self.name);
                     // this is needed becoz the next day I want to downscale after the end time
-                    self.patching(
-                        c.clone(),
-                        &scale_up.to_string(), // after scaleup, keep the kubesaver.com/original_count as the real non-zero count.
-                        Some(scale_up),
-                        "false",
-                    )
-                    .await?;
+                    return Ok(Some(
+                        self.patching(
+                            c.clone(),
+                            &scale_up.to_string(), // after scaleup, keep the kubesaver.com/original_count as the real non-zero count.
+                            Some(scale_up),
+                            "false",
+                        )
+                        .await?,
+                    ));
                 }
             }
         }
-        Ok(())
+        Ok(None)
     }
 
     async fn patching(
@@ -93,7 +99,7 @@ impl ScalingMachinery {
         orig_count: &str,
         replicas: Option<i32>,
         is_downscale: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<ScaledResources, Error> {
         let annotations: Value = json!({
             "annotations": {
                 "kubesaver.com/is_downscaled": is_downscale,
@@ -120,28 +126,16 @@ impl ScalingMachinery {
         patch.insert("spec".to_string(), spec);
         let patch_object = Value::Object(patch);
 
-        let rs: Option<Box<dyn ResourceExtension + Send + Sync>> = match &self.resource_type {
-            Resources::Deployment => Some(Box::new(Api::<Deployment>::namespaced(
-                client.clone(),
-                &self.namespace,
-            ))),
-            Resources::StatefulSet => Some(Box::new(Api::<StatefulSet>::namespaced(
-                client.clone(),
-                &self.namespace,
-            ))),
-            Resources::CronJob => Some(Box::new(Api::<CronJob>::namespaced(
-                client.clone(),
-                &self.namespace,
-            ))),
-            Resources::Namespace => None,
-            Resources::Hpa => Some(Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
-                client.clone(),
-                &self.namespace,
-            ))),
-        };
-        match rs {
+        let rs = dynamic_resource_type(client, &self.namespace, self.resource_type);
+        //TODO: Error handling
+        _ = match rs {
             Some(rs) => rs.patch_resource(&self.name, &patch_object).await,
             None => Ok(()),
-        }
+        };
+        Ok(ScaledResources {
+            name: self.name.to_owned(),
+            namespace: self.namespace.to_owned(),
+            kind: self.resource_type,
+        })
     }
 }

@@ -1,4 +1,4 @@
-use crate::downscaler::{JMSExpression, Res, ResourceExtension};
+use crate::downscaler::{JMSExpression, Res, ResourceExtension, ScaledResources};
 use crate::util::Error;
 use async_trait::async_trait;
 use k8s_openapi::api::autoscaling::v1::HorizontalPodAutoscaler;
@@ -28,9 +28,10 @@ impl JMSExpression for Namespace {}
 
 #[async_trait]
 impl<'a> Res for Nspace<'a> {
-    async fn downscale(&self, c: Client) -> Result<(), Error> {
+    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<Namespace> = Api::all(c.clone());
         let namespaces = api.list(&Default::default()).await.unwrap();
+        let mut list_namespace: Vec<Vec<ScaledResources>> = vec![];
         // TODO: Multiple threads
         for ns in namespaces.items {
             let result = ns.parse(self.expression).await?;
@@ -48,35 +49,43 @@ impl<'a> Res for Nspace<'a> {
 
                 let hpa_api: Api<HorizontalPodAutoscaler> =
                     Api::namespaced(c.clone(), &namespace_name);
-                hpa_api
-                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
-                    .await?;
+                list_namespace.push(
+                    hpa_api
+                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .await?,
+                );
                 debug!(
                     "Checking if any Deployment resources in namespace {}",
                     namespace_name
                 );
                 let d_api: Api<Deployment> = Api::namespaced(c.clone(), &namespace_name);
-                d_api
-                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
-                    .await?;
+                list_namespace.push(
+                    d_api
+                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .await?,
+                );
                 debug!(
                     "Checking if any StatefulSet resources in namespace {}",
                     namespace_name
                 );
                 let ss_api: Api<StatefulSet> = Api::namespaced(c.clone(), &namespace_name);
-                ss_api
-                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
-                    .await?;
+                list_namespace.push(
+                    ss_api
+                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .await?,
+                );
                 debug!(
                     "Checking if any CronJob resources in namespace {}",
                     namespace_name
                 );
                 let cj_api: Api<CronJob> = Api::namespaced(c.clone(), &namespace_name);
-                cj_api
-                    .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
-                    .await?;
+                list_namespace.push(
+                    cj_api
+                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .await?,
+                );
             }
         }
-        Ok(())
+        Ok(list_namespace.into_iter().flatten().collect())
     }
 }

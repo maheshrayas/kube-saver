@@ -1,15 +1,11 @@
-use k8s_openapi::api::{
-    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v1::HorizontalPodAutoscaler,
-    batch::v1::CronJob,
-};
-use kube::{Api, Client};
+use kube::Client;
 use log::info;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 
 use crate::{
-    downscaler::{ResourceExtension, Resources},
-    util::Error,
+    downscaler::Resources,
+    util::{dynamic_resource_type, Error},
 };
 
 pub struct UpscaleMachinery {
@@ -63,25 +59,7 @@ impl UpscaleMachinery {
             patch.insert("spec".to_string(), spec);
             let patch_object = Value::Object(patch);
 
-            let rs: Option<Box<dyn ResourceExtension>> = match self.resource_type {
-                Resources::Deployment => Some(Box::new(Api::<Deployment>::namespaced(
-                    c.clone(),
-                    &self.namespace,
-                ))),
-                Resources::StatefulSet => Some(Box::new(Api::<StatefulSet>::namespaced(
-                    c.clone(),
-                    &self.namespace,
-                ))),
-                Resources::CronJob => Some(Box::new(Api::<CronJob>::namespaced(
-                    c.clone(),
-                    &self.namespace,
-                ))),
-                Resources::Hpa => Some(Box::new(Api::<HorizontalPodAutoscaler>::namespaced(
-                    c.clone(),
-                    &self.namespace,
-                ))),
-                Resources::Namespace => None, //nothing to do
-            };
+            let rs = dynamic_resource_type(c, &self.namespace, self.resource_type);
             match rs {
                 Some(rs) => rs.patch_resource(&self.name, &patch_object).await,
                 None => Ok(()),

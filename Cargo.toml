@@ -30,6 +30,8 @@ clap = { version = "3.1.18", features = ["derive"] }
 openssl = { version = "0.10", features = ["vendored"] }
 openssl-src = "300.0.6"
 chrono={version = "0.4.22", default-features = false, features = ["clock"]}
+reqwest= {version = "0.11.9", features= ["multipart"]}
+csv="1.1.6"
 
 [dev-dependencies]
 anyhow="1.0"

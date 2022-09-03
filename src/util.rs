@@ -1,16 +1,19 @@
 use chrono::Local;
 use env_logger::Env;
-use kube::Client;
+use k8s_openapi::api::{
+    apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v1::HorizontalPodAutoscaler,
+    batch::v1::CronJob,
+};
+use kube::{Api, Client};
 use log::error;
 use std::io::Write;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-use crate::downscaler::Resources;
+use crate::downscaler::{ResourceExtension, Resources};
 
 pub fn init_logger() {
     let env = Env::default().filter("RUST_LOG");
-
     env_logger::Builder::from_env(env)
         .format(|buf, record| {
             writeln!(
@@ -54,6 +57,23 @@ pub enum Error {
         #[from]
         source: ParseIntError,
     },
+    #[error("CSV Error: {source}")]
+    CSVError {
+        #[from]
+        source: csv::Error,
+    },
+
+    #[error("IO Error: {source}")]
+    IOError {
+        #[from]
+        source: std::io::Error,
+    },
+
+    #[error("Reqwest Error: {source}")]
+    ReqwestError {
+        #[from]
+        source: reqwest::Error,
+    },
 }
 
 impl From<String> for Error {
@@ -69,6 +89,20 @@ pub struct ContextData {
 impl ContextData {
     pub fn new(client: Client) -> Self {
         ContextData { client }
+    }
+}
+
+pub fn dynamic_resource_type(
+    c: Client,
+    ns: &str,
+    resource_type: Resources,
+) -> Option<Box<dyn ResourceExtension + Send + Sync>> {
+    match resource_type {
+        Resources::Deployment => Some(Box::new(Api::<Deployment>::namespaced(c, ns))),
+        Resources::StatefulSet => Some(Box::new(Api::<StatefulSet>::namespaced(c, ns))),
+        Resources::CronJob => Some(Box::new(Api::<CronJob>::namespaced(c, ns))),
+        Resources::Hpa => Some(Box::new(Api::<HorizontalPodAutoscaler>::namespaced(c, ns))),
+        Resources::Namespace => None, //nothing to do
     }
 }
 

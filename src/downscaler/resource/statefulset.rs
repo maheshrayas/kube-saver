@@ -6,8 +6,8 @@ use log::debug;
 use serde_json::Value;
 
 use crate::controller::common::UpscaleMachinery;
-use crate::downscaler::Res;
 use crate::downscaler::{JMSExpression, ResourceExtension, Resources};
+use crate::downscaler::{Res, ScaledResources};
 use crate::util::Error;
 
 use super::common::ScalingMachinery;
@@ -33,9 +33,10 @@ impl JMSExpression for StatefulSet {}
 
 #[async_trait]
 impl Res for StateSet<'_> {
-    async fn downscale(&self, c: Client) -> Result<(), Error> {
+    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<StatefulSet> = Api::all(c.clone());
         let ss = api.list(&Default::default()).await.unwrap();
+        let mut list_ss: Vec<ScaledResources> = vec![];
         for item in ss.items {
             let result = item.parse(self.expression).await?;
             let original_count = (item.spec.unwrap().replicas.unwrap()).to_string();
@@ -48,11 +49,12 @@ impl Res for StateSet<'_> {
                     annotations: item.metadata.annotations,
                     resource_type: Resources::StatefulSet,
                 };
-                pat.scaling_machinery(c.clone(), self.is_uptime).await?;
+                if let Some(scaled_res) = pat.scaling_machinery(c.clone(), self.is_uptime).await? {
+                    list_ss.push(scaled_res);
+                };
             }
         }
-
-        Ok(())
+        Ok(list_ss)
     }
 }
 
@@ -70,8 +72,9 @@ impl ResourceExtension for Api<StatefulSet> {
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<ScaledResources>, Error> {
         let list = self.list(&Default::default()).await?;
+        let mut list_ss: Vec<ScaledResources> = vec![];
         for item in list.items {
             let name = item.metadata.name.unwrap();
             let namespace = item.metadata.namespace.unwrap();
@@ -88,9 +91,11 @@ impl ResourceExtension for Api<StatefulSet> {
                 annotations: item.metadata.annotations,
                 resource_type: Resources::StatefulSet,
             };
-            pat.scaling_machinery(c.clone(), is_uptime).await?;
+            if let Some(scaled_res) = pat.scaling_machinery(c.clone(), is_uptime).await? {
+                list_ss.push(scaled_res);
+            };
         }
-        Ok(())
+        Ok(list_ss)
     }
 
     async fn controller_upscale_resource_items(

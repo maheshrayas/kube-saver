@@ -1,7 +1,10 @@
+#[allow(unused_imports)]
+use crate::csv::generate_csv;
 use crate::downscaler::resource::{
     cronjob::CJob, deployment::Deploy, hpa::Hpa, namespace::Nspace, statefulset::StateSet,
 };
 use crate::downscaler::{Res, Resources, Rule, Rules};
+use crate::slack::send_slack_msg;
 use crate::time_check::is_uptime;
 use crate::util::{check_input_resource, Error};
 use core::time;
@@ -34,6 +37,7 @@ pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
     }
 }
 
+#[allow(unused_variables)]
 impl Rules {
     pub async fn process_rules(&self, client: Client) -> Result<(), Error> {
         for e in &self.rules {
@@ -57,7 +61,8 @@ impl Rules {
                 let f = check_input_resource(r);
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
-                    match f.unwrap() {
+
+                    let resoure_lust = match f.unwrap() {
                         Resources::Hpa => {
                             let h = Hpa::new(&e.jmespath, e.replicas, is_uptime);
                             h.downscale(client.clone()).await?
@@ -79,6 +84,10 @@ impl Rules {
                             c.downscale(client.clone()).await?
                         }
                     };
+                    // Used to send this list to the notification method
+                    //generate_csv(&resoure_lust, &e.id)?;
+                    //Send Slack Message
+                    //send_slack_msg("".to_string(), &e.id).await?;
                 }
             }
         }

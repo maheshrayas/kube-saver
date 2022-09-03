@@ -20,6 +20,13 @@ pub struct Rules {
     pub(crate) rules: Vec<Rule>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ScaledResources {
+    pub(crate) name: String,
+    pub(crate) namespace: String,
+    pub(crate) kind: Resources,
+}
+
 #[async_trait]
 pub trait JMSExpression {
     async fn parse(&self, expression: &str) -> Result<bool, Error>
@@ -36,10 +43,10 @@ pub trait JMSExpression {
 
 #[async_trait]
 pub trait Res {
-    async fn downscale(&self, c: Client) -> Result<(), Error>;
+    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error>;
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Resources {
     Deployment,
     StatefulSet,
@@ -57,7 +64,7 @@ pub trait ResourceExtension: Send + Sync {
         replicas: Option<i32>,
         client: Client,
         is_uptime: bool,
-    ) -> Result<(), Error>;
+    ) -> Result<Vec<ScaledResources>, Error>;
     // method is implmented by Upscaler controller/operator
     async fn controller_upscale_resource_items(
         &self,

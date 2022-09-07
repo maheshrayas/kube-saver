@@ -1,9 +1,9 @@
 use chrono_tz::Tz;
 use env_logger::Env;
-use k8s_openapi::chrono::Local;
-use k8s_openapi::chrono::{DateTime, Datelike, TimeZone, Utc};
+use k8s_openapi::chrono::{DateTime, Datelike, NaiveDate, TimeZone, Timelike, Utc};
+use k8s_openapi::chrono::{Local, NaiveDateTime};
 use kube::Client;
-use log::{debug, error};
+use log::{debug, error, info};
 use regex::Captures;
 use std::io::Write;
 use std::num::ParseIntError;

@@ -117,7 +117,6 @@ impl UpTimeCheck {
                 && self.dt.hour() < complex_high_time.hour()
             {
                 // downscaling
-                info!("Current rules states, its a downtime for configured resources");
                 return false;
             } else if self.dt.weekday().num_days_from_monday() >= self.week_start
                 && self.dt.weekday().num_days_from_monday() <= self.week_end
@@ -133,7 +132,6 @@ impl UpTimeCheck {
                         config_date_low_hour,
                         config_date_high_hour,
                     };
-                    info!(" dt.hour() <= complex_high_time.hour()");
                     return t.cmp_time();
                 }
                 // if current time is less 12 AM but less than low hour
@@ -147,7 +145,6 @@ impl UpTimeCheck {
                         config_date_low_hour,
                         config_date_high_hour,
                     };
-                    info!("dt.hour() >= complex_low_time.hour()");
                     return t.cmp_time();
                 }
             }
@@ -186,11 +183,10 @@ pub fn is_uptime(m: Captures) -> Result<bool, Error> {
 
 #[cfg(test)]
 mod timecheck_unit_test {
-    use std::str::FromStr;
-
     use chrono::{NaiveDate, TimeZone};
     use chrono_tz::Australia::Sydney;
     use regex::Regex;
+    use std::str::FromStr;
 
     struct CurrentDateTime {
         year: i32,
@@ -321,7 +317,12 @@ mod timecheck_unit_test {
         assert_eq!(u.is_uptime(), false);
         // Datetime: 12-Sep-2022 Day: Monday Time: 03:00 AM
         // Expected : Resources should be DOWN
-        cdt = CurrentDateTime::new(2022, 09, 11, 21, 00, 00);
+        cdt = CurrentDateTime::new(2022, 09, 12, 03, 00, 00);
+        u = cdt.get_data(rule);
+        assert_eq!(u.is_uptime(), false);
+        // Datetime: 12-Sep-2022 Day: Monday Time: 01:00 AM
+        // Expected : Resources should be DOWN
+        cdt = CurrentDateTime::new(2022, 09, 12, 01, 00, 00);
         u = cdt.get_data(rule);
         assert_eq!(u.is_uptime(), false);
     }

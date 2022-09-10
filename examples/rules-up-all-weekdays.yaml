@@ -1,0 +1,7 @@
+rules:
+  - id: rules-up-all-week
+    uptime: Mon-Fri 00:00-23:59 Australia/Sydney
+    jmespath: "metadata.name == 'business'"
+    resource:
+      - Namespace
+    replicas: 0

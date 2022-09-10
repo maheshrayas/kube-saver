@@ -1,0 +1,7 @@
+rules:
+  - id: rules-downscale-hpa
+    uptime: Mon-Fri 07:00-19:00 Australia/Sydney
+    jmespath: "metadata.labels.app == 'hpa-1'"
+    resource:
+      - hpa
+    replicas: 0 #1 or 2 This will set HPA minReplicas

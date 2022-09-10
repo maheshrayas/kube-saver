@@ -1,7 +1,7 @@
 rules:
   - id: rules-downscale-all-namespaces-except
     uptime: Mon-Fri 07:00-19:00 Australia/Sydney
-    jmespath: "metadata.name != 'kube-system' || metadata.name != 'istio-system' || metadata.name != 'kube-saver'"
+    jmespath: "metadata.name != 'kube-system' && metadata.name != 'istio-system' && metadata.name != 'kube-saver'"
     resource:
       - Namespace
     replicas: 0

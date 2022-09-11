@@ -67,10 +67,10 @@ rules:
     resource:
       - hpa # type of resource
     replicas:1
-  # set minReplicas of HPA to 1
+  # set replicas to 0 when the resources has label app:some_random_app but not service:some_random_service
   - id: combination-of-resources
     uptime: Mon-Fri 09:00-17:00 Australia/Sydney
-    jmespath: "metadata.labels.app == 'some_random_app' || metadata.labels.service != 'some_random_service'" 
+    jmespath: "metadata.labels.app == 'some_random_app' && metadata.labels.service != 'some_random_service'" 
     resource:
       - Deployment # type of resource
       - Statefulset

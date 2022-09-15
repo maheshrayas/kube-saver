@@ -80,6 +80,8 @@ rules:
 
 * Define uptime in [Olson timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) format
 
+More Examples: [here](./examples/example.md)
+
 ## How can I upscale resouce during the downtime.?
 
 kube-saver will automatically upscale the resoures to orignial number of replicas when the current time falls between the `uptime` configured in rules.yaml. But if you want to manually scale up single deployment/statefulset or all the deployment & stateulset resources in Namespace, you have following options and it won't be scaled down until next day downtime.
@@ -87,7 +89,7 @@ Choose any of the option below:
 
 * Configure [upscaled.yaml](./k8s/crds/upscaler.yaml) and 
 
-  ```bash 
+  ```bash
   kubectl apply -f ./k8s/crds/upscaler.yaml
 
   ```

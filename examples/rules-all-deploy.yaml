@@ -1,0 +1,16 @@
+rules:
+  - id: rules-downscale-deployment
+    uptime: Mon-Fri 07:00-19:00 Australia/Sydney
+    jmespath: "metadata.labels.app == 'deployment-1'"
+    resource:
+      - Deployment
+    replicas: 0
+  # Downscale all deployment with labels app:backend and not app:deployment-2
+  # This is useful when you want to scale down all deployments with labels type:Backend and not scale down
+  # labels app: deployment-2
+  - id: rules-downscale-deployment
+    uptime: Mon-Fri 07:00-19:00 Australia/Sydney
+    jmespath: "metadata.labels.type == 'backend' && metadata.labels.app != 'deployment-2'"
+    resource:
+      - Deployment
+    replicas: 0

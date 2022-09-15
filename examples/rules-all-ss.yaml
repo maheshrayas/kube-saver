@@ -1,0 +1,7 @@
+rules:
+  - id: rules-downscale-deployment
+    uptime: Mon-Fri 07:00-19:00 Australia/Sydney
+    jmespath: "metadata.labels.app == 'ss-1'"
+    resource:
+      - Statefulset
+    replicas: 0

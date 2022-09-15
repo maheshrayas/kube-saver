@@ -1,0 +1,6 @@
+rules:
+  - id: rules-downscale-all-crojon
+    uptime: Mon-Fri 07:00-19:00 Australia/Sydney
+    jmespath: "metadata.labels.app == 'cronjob-1'"
+    resource:
+      - cronjob

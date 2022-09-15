@@ -1,0 +1,7 @@
+rules:
+  - id: rules-downscale-dep-ss-cj
+    uptime: Mon-Fri 07:00-02:00 Australia/Sydney
+    jmespath: "metadata.name == 'business'"
+    resource:
+      - Namespace
+    replicas: 0

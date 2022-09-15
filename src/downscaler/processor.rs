@@ -7,8 +7,6 @@ use crate::util::{check_input_resource, Error};
 use core::time;
 use kube::Client;
 use log::{debug, error, info};
-#[cfg(test)]
-use pretty_assertions::assert_eq;
 use regex::Regex;
 use std::fs::File;
 

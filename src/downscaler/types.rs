@@ -1,8 +1,5 @@
 use async_trait::async_trait;
 use kube::Client;
-
-#[cfg(test)]
-use pretty_assertions::assert_eq;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::str::FromStr;

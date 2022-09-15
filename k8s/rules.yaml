@@ -1,7 +1,36 @@
 rules:
-  - id: rules-downscale-all-namespaces-except
-    uptime: Mon-Fri 07:00-19:00 Australia/Sydney
-    jmespath: "metadata.name != 'kube-system' || metadata.name != 'istio-system' || metadata.name != 'kube-saver'"
+  # scale down deployment with name go-app-deployment-2 when current time/day not in uptime
+  - id: rules-downscale-deployments
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    # https://jmespath.org/
+    jmespath: "metadata.name == 'go-app-deployment'"
     resource:
-      - Namespace
-    replicas: 0
+      - Deployment # type of resource
+    replicas: 0 # either set the replicas:0 or any number during nonuptime
+  # scale down all statefulset with name web when current time/day not in uptime
+  - id: rules-downscale-statefulset
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    jmespath: "metadata.name == 'web'"
+    resource:
+      - StatefulSet # type of resource
+    replicas: 0 # either set the replicas:0 or any number during nonuptime
+  # scale down all deployment, statefulset, cronjob in namespace kuber when current time/day not in uptime
+  - id: rules-downscale-all-in-namespace
+    uptime: Mon-Fri 09:00-21:00 Australia/Sydney
+    jmespath: "metadata.name == 'kube-saver'"
+    resource:
+      - Namespace # type of resource
+    replicas: 1 # either set the replicas:0 or any number during nonuptime
+  # suspend cronjob1 when current time/day not in uptime
+  - id: rules-suspend-cronjob
+    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+    jmespath: "metadata.name == 'cronjob1'"
+    resource:
+      - cronjob # type of resource
+  #scale down hpa to > 0 when current time/day not in uptime
+  - id: rules-downscale-hpa
+    uptime: Mon-Sun 09:00-23:59 Australia/Sydney
+    jmespath: "metadata.name == 'php-apache'"
+    resource:
+      - hpa # type of resource
+    replicas: 1 # replicas>0 as minReplicas in Hpa>=1

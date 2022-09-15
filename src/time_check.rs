@@ -31,7 +31,7 @@ impl Timer {
         {
             // the uptime is between the range
             // start upscaling
-            info!(
+            debug!(
                 "current {} is range  {} &  {}",
                 self.dt, self.config_date_low_hour, self.config_date_high_hour
             );
@@ -39,7 +39,7 @@ impl Timer {
         } else {
             // the downtime is between the range
             // start downscaling
-            info!(
+            debug!(
                 "current {} is not in range  {} &  {}",
                 self.dt, self.config_date_low_hour, self.config_date_high_hour
             );
@@ -87,10 +87,13 @@ impl UpTimeCheck {
             && self.dt.weekday().num_days_from_monday() <= self.week_end
             && complex_high_time > complex_low_time
         {
-            // if the current date time is greater or equal to current date low hour and current date time is less than or equal to current date high hour.
-            info!("config_date_low_hour {}", config_date_low_hour);
-            info!("config_date_high_hour {}", config_date_high_hour);
-            info!("current time {}", self.dt.naive_local());
+            info!(
+                "config_date_low_hour: {} config_date_high_hour: {} and current local time {} ",
+                config_date_low_hour,
+                config_date_high_hour,
+                self.dt.naive_local()
+            );
+
             let t = Timer {
                 dt: self.dt,
                 config_date_low_hour,
@@ -98,7 +101,7 @@ impl UpTimeCheck {
             };
             t.cmp_time()
         } else if complex_high_time < complex_low_time {
-            info!("current rule is for rule whose end time is extending midnight");
+            info!("current rule is for rules whose end time is extending midnight");
             // check if current day has passed the end day of rule
             // for example RULE = Mon-Fri 7AM - 01AM, and its sat 01:10 AM
             if self.dt.weekday().num_days_from_monday() == self.week_end + 1 {
@@ -134,7 +137,7 @@ impl UpTimeCheck {
                     };
                     return t.cmp_time();
                 }
-                // if current time is less 12 AM but less than low hour
+                // if current time is less 12 AM but greater than low hour
                 else if self.dt.hour() >= complex_low_time.hour() {
                     // below is needed if there are minutes involved, for example start time is 7:30 AM
                     config_date_high_hour =

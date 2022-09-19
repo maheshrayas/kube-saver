@@ -13,6 +13,7 @@ pub(crate) struct Rule {
     pub(crate) jmespath: String,
     pub(crate) resource: Vec<String>,
     pub(crate) replicas: Option<i32>,
+    pub(crate) slack_channel: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]

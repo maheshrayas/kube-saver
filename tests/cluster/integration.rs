@@ -14,11 +14,11 @@ use std::fs::File;
 async fn test6_check_if_upscales() -> Result<()> {
     // First downscale all the resources with specific jmespath
     let f = File::open("tests/rules/rules13.yaml").unwrap();
-    let r: kube_saver::downscaler::Rules = serde_yaml::from_reader(f).unwrap();
+    let r: saver::downscaler::Rules = serde_yaml::from_reader(f).unwrap();
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
 
     let cj: Api<CronJob> = Api::namespaced(client.clone(), "kuber13");
     let deploy: Api<Deployment> = Api::namespaced(client.clone(), "kuber13");

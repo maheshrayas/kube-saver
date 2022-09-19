@@ -15,7 +15,7 @@ pub async fn send_slack_msg(channel: String, file_name: &str) -> Result<(), Erro
 
     let response = client
         .post("https://maheshrayas.slack.com/api/files.upload")
-        .header("Authorization", "Bearer {}")
+        .header("Authorization", "Bearer ")
         .multipart(form)
         .send()
         .await

@@ -7,39 +7,72 @@ use crate::downscaler::{Res, Resources, Rule, Rules};
 use crate::slack::send_slack_msg;
 use crate::time_check::is_uptime;
 use crate::util::{check_input_resource, Error};
+use crate::{CommType, KubeSaver};
 use core::time;
 use kube::Client;
 use log::{debug, error, info};
 use regex::Regex;
 use std::fs::File;
 
-#[cfg(not(tarpaulin_include))]
-pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
-    let interval_millis = time::Duration::from_millis(interval * 1000);
-    let f = File::open(rules).unwrap();
-    let r: Rules = serde_yaml::from_reader(f).unwrap();
-    let client = Client::try_default().await?;
-    info!(
-        "Confgured to look for resource at the interval of {} secs",
-        interval_millis.as_secs()
-    );
-    loop {
-        let ret = r.process_rules(client.clone()).await;
-        match ret {
-            Ok(a) => a,
-            Err(e) => {
-                // dont break the loop/process, just report the error to stdout
-                error!("Error: {}", e);
-            }
-        };
+#[derive(Clone)]
+pub struct Process {
+    interval: u64,
+    rules: String,
+    comm_type: Option<CommType>,
+    comm_detail: Option<String>,
+}
 
-        tokio::time::sleep(interval_millis).await;
+impl From<KubeSaver> for Process {
+    fn from(k: KubeSaver) -> Self {
+        Self {
+            interval: k.interval,
+            rules: k.rules,
+            comm_type: k.comm_type,
+            comm_detail: k.comm_details,
+        }
+    }
+}
+
+impl Process {
+    #[cfg(not(tarpaulin_include))]
+    pub async fn processor(&self) -> Result<(), Error> {
+        let interval_millis = time::Duration::from_millis(self.interval * 1000);
+        let f = File::open(&self.rules).unwrap();
+        let r: Rules = serde_yaml::from_reader(f).unwrap();
+        let client = Client::try_default().await?;
+        info!(
+            "Confgured to look for resource at the interval of {} secs",
+            interval_millis.as_secs()
+        );
+        loop {
+            let ret = r
+                .process_rules(
+                    client.clone(),
+                    self.comm_type.clone(),
+                    self.comm_detail.clone(),
+                )
+                .await;
+
+            match ret {
+                Ok(a) => a,
+                Err(e) => {
+                    // dont break the loop/process, just report the error to stdout
+                    error!("Error: {}", e);
+                }
+            };
+            tokio::time::sleep(interval_millis).await;
+        }
     }
 }
 
 #[allow(unused_variables)]
 impl Rules {
-    pub async fn process_rules(&self, client: Client) -> Result<(), Error> {
+    pub async fn process_rules(
+        &self,
+        client: Client,
+        comm_type: Option<CommType>,
+        comm_detail: Option<String>,
+    ) -> Result<(), Error> {
         for e in &self.rules {
             debug!(
                 "Checking if the current timestamp is in the uptime slot {} for the rule id {}",
@@ -62,7 +95,7 @@ impl Rules {
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
 
-                    let resoure_lust = match f.unwrap() {
+                    let resoure_list = match f.unwrap() {
                         Resources::Hpa => {
                             let h = Hpa::new(&e.jmespath, e.replicas, is_uptime);
                             h.downscale(client.clone()).await?
@@ -84,10 +117,15 @@ impl Rules {
                             c.downscale(client.clone()).await?
                         }
                     };
-                    // Used to send this list to the notification method
-                    //generate_csv(&resoure_lust, &e.id)?;
-                    //Send Slack Message
-                    //send_slack_msg("".to_string(), &e.id).await?;
+                    if comm_type.is_some() {
+                        // Used to send this list to the notification method
+                        generate_csv(&resoure_list, &e.id)?;
+                        //Send Slack Message
+                        if e.slack_channel.is_some() {
+                            let channel = &e.slack_channel;
+                            send_slack_msg(channel.to_owned().unwrap(), &e.id).await?;
+                        }
+                    }
                 }
             }
         }

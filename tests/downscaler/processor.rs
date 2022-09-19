@@ -5,7 +5,7 @@ use k8s_openapi::api::{
     batch::v1::CronJob,
 };
 use kube::{Api, Client};
-use kube_saver::downscaler::Rules;
+use saver::downscaler::Rules;
 use std::fs::File;
 
 #[tokio::test]
@@ -17,7 +17,7 @@ async fn test1_namespace() {
         .expect("Failed to read kubeconfig");
     // sleep for 10 sec so that hpa will scale the replicas original count =3 since hpa
     tokio::time::sleep(time::Duration::from_millis(10000)).await;
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // test if all Deployment are downscaled in namespace
     let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber1");
     let d = api.get("test-kuber1-deploy1").await.unwrap();
@@ -138,7 +138,7 @@ async fn test2_deployment() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // kube-saver must scale down to 0
     let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber3");
     let d = api.get("test-kuber3-deploy1").await.unwrap();
@@ -155,7 +155,7 @@ async fn test2_statefulset() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // kube-saver must scale down to 0
     let api: Api<StatefulSet> = Api::namespaced(client.clone(), "kuber3");
     let d = api.get("test-kuber3-ss1").await.unwrap();
@@ -172,7 +172,7 @@ async fn test3_cronjob() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // kube-saver must suspend the cronjob
     let api: Api<CronJob> = Api::namespaced(client.clone(), "kuber9");
     let d = api.get("test-kuber9-cj1").await.unwrap();
@@ -206,7 +206,7 @@ async fn test2_scaledown_scaledupresource() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // kube-saver must scale down to 0
     let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber7");
     let d = api.get("test-kuber7-deploy1").await.unwrap();
@@ -224,7 +224,7 @@ async fn test2_scaleup_scaleddownresource() {
     let d = api.get("test-kuber8-deploy1").await.unwrap();
     //initially should be zero
     assert_eq!(d.spec.unwrap().replicas, Some(0));
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // kube-saver must scale down to 0
     let d = api.get("test-kuber8-deploy1").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(2));
@@ -237,7 +237,7 @@ async fn test4_hpa() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // kube-saver must set minReplicas =1 in the hpa
     let api: Api<HorizontalPodAutoscaler> = Api::namespaced(client.clone(), "kuber12c");
     let d = api.get("test-kuber12c-hpa1").await.unwrap();
@@ -278,7 +278,7 @@ async fn test4_hpa_scale_all_resources_replicas_1() {
     let d = api.get("test-kuber12-deploy1").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(3));
 
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     // kube-saver must set minReplicas =1 in the cronjob
     let hpa_api: Api<HorizontalPodAutoscaler> = Api::namespaced(client.clone(), "kuber12");
     let hpa = hpa_api.get("test-kuber12-hpa").await.unwrap();
@@ -301,7 +301,7 @@ async fn test4_hpa_scale_all_resources_replicas_1() {
     // now test if they are getting scaled up to orignal replicas
     let f = File::open("tests/rules/rules12a.yaml").unwrap();
     let r: Rules = serde_yaml::from_reader(f).unwrap();
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
     let hpa_api: Api<HorizontalPodAutoscaler> = Api::namespaced(client.clone(), "kuber12");
     let hpa = hpa_api.get("test-kuber12-hpa").await.unwrap();
     //back to original replicas

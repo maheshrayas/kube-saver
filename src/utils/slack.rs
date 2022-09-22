@@ -1,3 +1,5 @@
+use std::fs;
+
 use crate::error::Error;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -24,7 +26,7 @@ pub struct SlackResponse {
 
 impl<'a> Slack<'a> {
     pub fn new(
-        uptime: bool,
+        comment: &'a str,
         channel: &'a str,
         file_name: &'a str,
         slack_msg_info: &'a str,
@@ -35,19 +37,12 @@ impl<'a> Slack<'a> {
             channel,
             file_name,
             slack_msg_info,
-            comment: Self::comment(uptime),
+            comment,
             slack_org,
             token,
         }
     }
 
-    fn comment(uptime: bool) -> &'static str {
-        if uptime {
-            "Scaling Up"
-        } else {
-            "Scaling Down"
-        }
-    }
     pub async fn send_slack_msg(&self) -> Result<(), Error> {
         let client = reqwest::Client::new();
         let mut file = File::open(format!("{}.csv", self.file_name)).await?;
@@ -90,5 +85,12 @@ impl<'a> Slack<'a> {
             }
             Ok(())
         }
+    }
+}
+
+impl Drop for Slack<'_> {
+    fn drop(&mut self) {
+        fs::remove_file(format!("{}.csv", self.file_name))
+            .unwrap_or_else(|_| info!("failed to delete {}", self.file_name));
     }
 }

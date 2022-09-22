@@ -124,12 +124,13 @@ impl Rules {
                                     generate_csv(&resoure_list, &e.id)?;
                                     let slack_channel = &e.slack_channel;
                                     let token = comm.get_secret().unwrap();
+                                    let comment = slact_alert_initial_comment(&e.id, true);
                                     let s = Slack::new(
-                                        is_uptime,
+                                        &comment,
                                         e.slack_channel.as_ref().unwrap(),
                                         &e.id,
                                         "KubeSaver Alert",
-                                        "maheshrayas",
+                                        comm_detail.as_ref().unwrap(),
                                         &token,
                                     );
                                     s.send_slack_msg().await?;
@@ -161,6 +162,14 @@ impl Rule {
         };
         m
     }
+}
+
+fn slact_alert_initial_comment(id: &str, up_time: bool) -> String {
+    let mut event = "down";
+    if up_time {
+        event = "Up";
+    }
+    format!("Scaling {} event completed for rule id {}", event, &id)
 }
 
 #[test]

@@ -8,13 +8,14 @@ use k8s_openapi::api::{
 };
 use kube::{Api, Client};
 use log::{error, info};
-use std::{env, fs, io::Write, num::ParseIntError, path::Path, str::FromStr};
+use std::{env, fs, io::Write, path::Path, str::FromStr};
 
+use crate::error::Error;
 use crate::{ResourceExtension, Resources};
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Default)]
 #[clap(author, version, about, long_about = None)]
-pub struct KubeSaver {
+pub struct Args {
     // Loop interval in secs
     #[clap(short, long, default_value_t = 60)]
     pub interval: u64,
@@ -31,7 +32,7 @@ pub struct KubeSaver {
     #[clap(long, value_parser)]
     pub comm_details: Option<String>,
 }
-impl KubeSaver {
+impl Args {
     pub fn new() -> Self {
         let cli = Self::parse();
         match cli.debug {
@@ -72,7 +73,7 @@ impl FromStr for CommType {
         match input.to_lowercase().as_str() {
             "slack" | "Slack" => Ok(CommType::Slack),
             e => {
-                let mut cmd = KubeSaver::command();
+                let mut cmd = Args::command();
                 cmd.error(
                     ErrorKind::InvalidValue,
                     format!("{e} is invalid input, Support args are Slack"),
@@ -122,8 +123,8 @@ impl CommType {
                 let env_slack_token = env::var("SLACK_API_TOKEN");
                 let secret_vol = Path::new("/var/slack_token");
                 // Read ENV variable SLACK_API_TOKEN
-                let token = if env_slack_token.is_ok() {
-                    env_slack_token.unwrap()
+                let token = if let Ok(token) = env_slack_token {
+                    token
                 } else if secret_vol.exists() {
                     // if not present in ENV variable, look for volume
                     let f = fs::read_to_string(secret_vol);
@@ -141,50 +142,6 @@ impl CommType {
     }
 }
 
-/// All errors possible to occur during reconciliation
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    /// Any error originating from the `kube-rs` crate
-    #[error("Kubernetes reported error: {source}")]
-    KubeError {
-        #[from]
-        source: kube::Error,
-    },
-    /// Error in user input or typically missing fields.
-    #[error("Invalid User Input: {0}")]
-    UserInputError(String),
-    /// Error in while converting the string to int
-    #[error("Invalid Upscaler CRD: {source}")]
-    ParseError {
-        #[from]
-        source: ParseIntError,
-    },
-    #[error("CSV Error: {source}")]
-    CSVError {
-        #[from]
-        source: csv::Error,
-    },
-
-    #[error("IO Error: {source}")]
-    IOError {
-        #[from]
-        source: std::io::Error,
-    },
-
-    #[error("Reqwest Error: {source}")]
-    ReqwestError {
-        #[from]
-        source: reqwest::Error,
-    },
-    #[error("Missing input: {0}")]
-    MissingRequiredArgument(String),
-}
-
-impl From<String> for Error {
-    fn from(s: String) -> Self {
-        Error::UserInputError(s)
-    }
-}
 /// Context injected with each `reconcile` and `on_error` method invocation.
 pub struct ContextData {
     pub client: Client,

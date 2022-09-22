@@ -3,10 +3,8 @@ use log::info;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 
-use crate::{
-    downscaler::Resources,
-    util::{dynamic_resource_type, Error},
-};
+use crate::error::Error;
+use crate::{downscaler::Resources, parser::dynamic_resource_type};
 
 pub struct UpscaleMachinery {
     pub(crate) replicas: Option<i32>,

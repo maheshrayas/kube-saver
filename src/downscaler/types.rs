@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::str::FromStr;
 
-use crate::util::Error;
+use crate::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub(crate) struct Rule {

@@ -1,6 +1,6 @@
 use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources, ScaledResources};
-use crate::util::Error;
+use crate::error::Error;
 use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::Deployment;
 use kube::api::{Patch, PatchParams};

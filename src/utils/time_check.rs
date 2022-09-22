@@ -4,7 +4,7 @@ use log::{debug, info};
 use regex::Captures;
 use std::{process::exit, str::FromStr};
 
-use crate::util::Error;
+use crate::error::Error;
 
 pub fn current_day(day: &str) -> u32 {
     match day {

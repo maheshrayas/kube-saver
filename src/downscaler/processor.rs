@@ -1,13 +1,12 @@
-#[allow(unused_imports)]
 use crate::csv::generate_csv;
 use crate::downscaler::resource::{
     cronjob::CJob, deployment::Deploy, hpa::Hpa, namespace::Nspace, statefulset::StateSet,
 };
 use crate::downscaler::{Res, Resources, Rule, Rules};
-use crate::slack::send_slack_msg;
+use crate::error::Error;
+use crate::parser::{check_input_resource, Args, CommType};
+use crate::slack::Slack;
 use crate::time_check::is_uptime;
-use crate::util::{check_input_resource, Error};
-use crate::{CommType, KubeSaver};
 use core::time;
 use kube::Client;
 use log::{debug, error, info};
@@ -22,8 +21,8 @@ pub struct Process {
     comm_detail: Option<String>,
 }
 
-impl From<KubeSaver> for Process {
-    fn from(k: KubeSaver) -> Self {
+impl From<Args> for Process {
+    fn from(k: Args) -> Self {
         Self {
             interval: k.interval,
             rules: k.rules,
@@ -117,13 +116,25 @@ impl Rules {
                             c.downscale(client.clone()).await?
                         }
                     };
-                    if comm_type.is_some() {
-                        // Used to send this list to the notification method
-                        generate_csv(&resoure_list, &e.id)?;
-                        //Send Slack Message
-                        if e.slack_channel.is_some() {
-                            let channel = &e.slack_channel;
-                            send_slack_msg(channel.to_owned().unwrap(), &e.id).await?;
+                    // Send the alert only if resources are scaled down or upped
+                    if !resoure_list.is_empty() {
+                        if let Some(ref comm) = comm_type {
+                            match comm {
+                                CommType::Slack => {
+                                    generate_csv(&resoure_list, &e.id)?;
+                                    let slack_channel = &e.slack_channel;
+                                    let token = comm.get_secret().unwrap();
+                                    let s = Slack::new(
+                                        is_uptime,
+                                        e.slack_channel.as_ref().unwrap(),
+                                        &e.id,
+                                        "KubeSaver Alert",
+                                        "maheshrayas",
+                                        &token,
+                                    );
+                                    s.send_slack_msg().await?;
+                                }
+                            }
                         }
                     }
                 }

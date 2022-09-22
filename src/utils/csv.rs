@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::{downscaler::ScaledResources, util::Error};
+use crate::{downscaler::ScaledResources, error::Error};
 
 pub fn generate_csv(resources: &[ScaledResources], file_name: &str) -> Result<(), Error> {
     let mut wtr = csv::Writer::from_path(format!("./{file_name}.csv"))?;

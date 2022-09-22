@@ -5,8 +5,10 @@ use std::collections::BTreeMap;
 
 use crate::{
     downscaler::{Resources, ScaledResources},
-    util::{dynamic_resource_type, Error},
+    parser::dynamic_resource_type,
 };
+
+use crate::error::Error;
 
 pub struct ScalingMachinery {
     pub(crate) tobe_replicas: Option<i32>,

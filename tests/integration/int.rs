@@ -46,7 +46,7 @@ async fn test6_check_if_upscales() -> Result<()> {
 
     // kubectl apply the upscale to scale with the condition that was used to scale down
     // "metadata.labels.env =='sit' && metadata.labels.version !='v2'"
-    crate::cluster::util::kubectl_appy("tests/upscaler/upscaler-scaleup13.yaml")
+    crate::integration::util::kubectl_appy("tests/upscaler/upscaler-scaleup13.yaml")
         .await
         .ok();
     // sleep for 10 sec so that controller can update the replicas

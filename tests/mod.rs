@@ -1,2 +1,2 @@
-mod cluster;
 mod downscaler;
+mod integration;

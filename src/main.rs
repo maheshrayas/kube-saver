@@ -4,23 +4,23 @@ use kube_runtime::controller::Controller;
 use log::error;
 use saver::{
     controller::watcher::{on_error, reconcile},
+    parser::Args,
     processor::Process,
-    KubeSaver,
 };
 use std::sync::Arc;
 
 #[cfg(not(tarpaulin_include))]
 #[tokio::main]
 async fn main() {
-    saver::util::init_logger();
-    let cli_parser = KubeSaver::new();
+    saver::parser::init_logger();
+    let cli_parser = Args::new();
     let kubernetes_client: Client = Client::try_default()
         .await
         .expect("Expected a valid KUBECONFIG environment variable.");
 
     let crd_api: Api<saver::controller::Upscaler> = Api::all(kubernetes_client.clone());
-    let context: Arc<saver::util::ContextData> =
-        Arc::new(saver::util::ContextData::new(kubernetes_client.clone()));
+    let context: Arc<saver::parser::ContextData> =
+        Arc::new(saver::parser::ContextData::new(kubernetes_client.clone()));
 
     let controller = Controller::new(crd_api.clone(), ListParams::default())
         .run(reconcile, on_error, context)

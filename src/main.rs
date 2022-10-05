@@ -12,8 +12,8 @@ use std::sync::Arc;
 #[cfg(not(tarpaulin_include))]
 #[tokio::main]
 async fn main() {
-    saver::parser::init_logger();
     let cli_parser = Args::new();
+    saver::parser::init_logger();
     let kubernetes_client: Client = Client::try_default()
         .await
         .expect("Expected a valid KUBECONFIG environment variable.");

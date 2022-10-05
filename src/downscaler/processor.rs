@@ -121,19 +121,23 @@ impl Rules {
                         if let Some(ref comm) = comm_type {
                             match comm {
                                 CommType::Slack => {
-                                    generate_csv(&resoure_list, &e.id)?;
-                                    let slack_channel = &e.slack_channel;
-                                    let token = comm.get_secret().unwrap();
-                                    let comment = slact_alert_initial_comment(&e.id, true);
-                                    let s = Slack::new(
-                                        &comment,
-                                        e.slack_channel.as_ref().unwrap(),
-                                        &e.id,
-                                        "KubeSaver Alert",
-                                        comm_detail.as_ref().unwrap(),
-                                        &token,
-                                    );
-                                    s.send_slack_msg().await?;
+                                    // if channel is defined in rules only
+                                    if let Some(ref channel) = e.slack_channel {
+                                        generate_csv(&resoure_list, &e.id)?;
+                                        let slack_channel = &e.slack_channel;
+                                        let token = comm.get_secret().unwrap();
+                                        let comment = slack_alert_initial_comment(&e.id, true);
+
+                                        let s = Slack::new(
+                                            &comment,
+                                            channel,
+                                            &e.id,
+                                            "KubeSaverAlert.csv",
+                                            comm_detail.as_ref().unwrap(),
+                                            &token,
+                                        );
+                                        s.send_slack_msg().await?;
+                                    }
                                 }
                             }
                         }
@@ -164,7 +168,7 @@ impl Rule {
     }
 }
 
-fn slact_alert_initial_comment(id: &str, up_time: bool) -> String {
+fn slack_alert_initial_comment(id: &str, up_time: bool) -> String {
     let mut event = "down";
     if up_time {
         event = "Up";

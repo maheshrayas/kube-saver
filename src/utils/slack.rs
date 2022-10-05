@@ -45,7 +45,7 @@ impl<'a> Slack<'a> {
 
     pub async fn send_slack_msg(&self) -> Result<(), Error> {
         let client = reqwest::Client::new();
-        let mut file = File::open(format!("{}.csv", self.file_name)).await?;
+        let mut file = File::open(format!("/tmp/{}.csv", self.file_name)).await?;
         let mut contents = vec![];
         let channel = self.channel;
         file.read_to_end(&mut contents).await?;

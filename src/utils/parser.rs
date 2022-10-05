@@ -13,6 +13,8 @@ use std::{env, fs, io::Write, path::Path, str::FromStr};
 use crate::error::Error;
 use crate::{ResourceExtension, Resources};
 
+const SLACK_TOKEN_FILE_PATH: &str = "/var/slack_token/slack.txt";
+
 #[derive(Parser, Debug, Default)]
 #[clap(author, version, about, long_about = None)]
 pub struct Args {
@@ -121,16 +123,26 @@ impl CommType {
         match *self {
             CommType::Slack => {
                 let env_slack_token = env::var("SLACK_API_TOKEN");
-                let secret_vol = Path::new("/var/slack_token");
+                let secret_vol = Path::new(SLACK_TOKEN_FILE_PATH);
                 // Read ENV variable SLACK_API_TOKEN
                 let token = if let Ok(token) = env_slack_token {
                     token
                 } else if secret_vol.exists() {
                     // if not present in ENV variable, look for volume
                     let f = fs::read_to_string(secret_vol);
-                    f.unwrap_or_else(|_| todo!())
+                    if let Ok(slack_token) = f {
+                        slack_token
+                    } else {
+                        error!(
+                            "Could not find slack api token at {}",
+                            SLACK_TOKEN_FILE_PATH
+                        );
+                        return Err(Error::MissingRequiredArgument(
+                            "Could not find slack api token".to_string(),
+                        ));
+                    }
                 } else {
-                    info!("Missing slack api token, either set SLACK_API_TOKEN or mount token as volune at /var/slack_token");
+                    info!("Missing slack api token, either set SLACK_API_TOKEN or mount token as volune at {}", SLACK_TOKEN_FILE_PATH);
                     // log error slack token not found
                     return Err(Error::MissingRequiredArgument(
                         "Could not find slack api token".to_string(),

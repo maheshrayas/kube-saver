@@ -44,26 +44,34 @@ impl<'a> Slack<'a> {
     }
 
     // TODO validate all inputs using proc macro
-    // async fn validate_slack_params(&self) -> Result<(), Error> {
-    //     // if channel is empty
-    //     if self.channel.is_empty() {};
-    //     // if comment is empty
-    //     if self.comment.is_empty() {}
-    //     // if file_name is empty
-    //     if self.file_name.is_empty() {}
+    fn validate_slack_params(&self) -> Result<(), Error> {
+        // if channel is empty
+        if self.channel.is_empty() {};
+        // if comment is empty
+        if self.comment.is_empty() {}
+        // if file_name is empty
+        if self.file_name.is_empty() {}
 
-    //     // if slack_msg_info is empty
-    //     if self.slack_msg_info.is_empty() {}
+        // if slack_msg_info is empty
+        if self.slack_msg_info.is_empty() {}
 
-    //     // if slack_org is empty
-    //     if self.slack_org.is_empty() {}
-
-    //     // if token is empty
-    //     if self.token.is_empty() {};
-    //     Ok(())
-    // }
+        // if slack_org is empty
+        if self.slack_org.is_empty() {
+            return Err(Error::UserInputError(
+                "Slack Org cannot be empty".to_string(),
+            ));
+        }
+        // if token is empty
+        if self.token.is_empty() {
+            return Err(Error::UserInputError(
+                "Slack Token cannot be empty".to_string(),
+            ));
+        };
+        Ok(())
+    }
 
     pub async fn send_slack_msg(&self) -> Result<(), Error> {
+        self.validate_slack_params()?;
         let url = format!("https://{}.slack.com", self.slack_org);
 
         let client = reqwest::Client::new();
@@ -186,7 +194,7 @@ async fn slack_msg_empty_org() {
     let retu = s.send_slack_msg().await;
     assert_eq!(
         retu.unwrap_err().to_string(),
-        "Reqwest Error: error sending request for url (https://.slack.com/api/files.upload): error trying to connect: dns error: failed to lookup address information: nodename nor servname provided, or not known"
+        "Invalid User Input: Slack Org cannot be empty"
     );
 }
 
@@ -222,6 +230,6 @@ async fn slack_msg_empty_token() {
     let retu = s.send_slack_msg().await;
     assert_eq!(
         retu.unwrap_err().to_string(),
-        "Slack Error: Error Code not_authed"
+        "Invalid User Input: Slack Token cannot be empty"
     );
 }

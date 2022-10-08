@@ -56,7 +56,7 @@ impl Process {
                 Ok(a) => a,
                 Err(e) => {
                     // dont break the loop/process, just report the error to stdout
-                    error!("Error: {}", e);
+                    error!("Error: {}", e.to_string());
                 }
             };
             tokio::time::sleep(interval_millis).await;
@@ -136,7 +136,7 @@ impl Rules {
                                             comm_detail.as_ref().unwrap(),
                                             &token,
                                         );
-                                        s.send_slack_msg().await?;
+                                        s.send_slack_msg().await?
                                     }
                                 }
                             }

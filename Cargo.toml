@@ -1,6 +1,6 @@
 [package]
 name = "kube-saver"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 authors = ["Mahesh Rayas<maheshrayas@gmail.com>"]
 
@@ -13,6 +13,7 @@ path = "src/main.rs"
 [lib]
 name = "saver"
 path = "src/lib.rs"
+
 
 [dependencies]
 log = "0.4"

@@ -37,6 +37,9 @@ pub enum Error {
     },
     #[error("Missing input: {0}")]
     MissingRequiredArgument(String),
+
+    #[error("Slack Error: {0}")]
+    SlackResponseError(String),
 }
 
 impl From<String> for Error {

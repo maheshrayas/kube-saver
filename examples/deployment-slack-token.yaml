@@ -25,7 +25,7 @@ spec:
             - "--interval=60" # every 60 secs, the controller will check the resources to downscale or upscale
             - "--debug" # remove to set log as INFO
             - "--comm-type=slack" # notification type is slack, pass this arg if you want notified to slack
-            - "--comm-details=<slacworkspace>" # slack workspace name, pass this arg if comm-type is set to slack
+            - "--comm-details=<slackworkspace>" # slack workspace name, pass this arg if comm-type is set to slack
           resources:
             limits:
               cpu: "1"
@@ -39,7 +39,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-            readOnlyRootFilesystem: false
+            readOnlyRootFilesystem: false # Create tmp file for slack notification
             runAsGroup: 1001
             runAsNonRoot: true
             runAsUser: 1001

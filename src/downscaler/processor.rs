@@ -169,11 +169,27 @@ impl Rule {
 }
 
 fn slack_alert_initial_comment(id: &str, up_time: bool) -> String {
-    let mut event = "down";
+    let mut event = "Down";
     if up_time {
         event = "Up";
     }
     format!("Scaling {} event completed for rule id {}", event, &id)
+}
+
+#[test]
+fn validate_up_slack_alert_initial_comment() {
+    assert_eq!(
+        slack_alert_initial_comment("scaledown-kube-id", true),
+        "Scaling Up event completed for rule id scaledown-kube-id"
+    )
+}
+
+#[test]
+fn validate_down_slack_alert_initial_comment() {
+    assert_eq!(
+        slack_alert_initial_comment("scaledown-kube-id", false),
+        "Scaling Down event completed for rule id scaledown-kube-id"
+    )
 }
 
 #[test]

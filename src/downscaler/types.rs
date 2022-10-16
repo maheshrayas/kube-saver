@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::str::FromStr;
 
-use crate::util::Error;
+use crate::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub(crate) struct Rule {
@@ -13,11 +13,19 @@ pub(crate) struct Rule {
     pub(crate) jmespath: String,
     pub(crate) resource: Vec<String>,
     pub(crate) replicas: Option<i32>,
+    pub(crate) slack_channel: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Rules {
     pub(crate) rules: Vec<Rule>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScaledResources {
+    pub(crate) name: String,
+    pub(crate) namespace: String,
+    pub(crate) kind: Resources,
 }
 
 #[async_trait]
@@ -36,10 +44,10 @@ pub trait JMSExpression {
 
 #[async_trait]
 pub trait Res {
-    async fn downscale(&self, c: Client) -> Result<(), Error>;
+    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error>;
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Resources {
     Deployment,
     StatefulSet,
@@ -57,7 +65,7 @@ pub trait ResourceExtension: Send + Sync {
         replicas: Option<i32>,
         client: Client,
         is_uptime: bool,
-    ) -> Result<(), Error>;
+    ) -> Result<Vec<ScaledResources>, Error>;
     // method is implmented by Upscaler controller/operator
     async fn controller_upscale_resource_items(
         &self,

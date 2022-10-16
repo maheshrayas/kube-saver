@@ -1,19 +1,25 @@
 [package]
 name = "kube-saver"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 authors = ["Mahesh Rayas<maheshrayas@gmail.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
  
+[[bin]]
+name = "kube-saver"
+path = "src/main.rs"
+
+[lib]
+name = "saver"
+path = "src/lib.rs"
 
 [dependencies]
 log = "0.4"
 tokio = { version = "1.18.2", features = ["full"] }
-kube = { version = "0.74.0", features = ["runtime", "derive"] }
-kube-derive = "0.74.0" # Support for Custom Resource Definitions
-kube-runtime = "0.74.0" # Custom controller support
-k8s-openapi = { version = "0.15.0", features = ["v1_24"] }
+kube = { version = "0.75.0", features = ["runtime", "derive"] }
+kube-runtime = "0.75.0" # Custom controller support
+k8s-openapi = { version = "0.16.0", features = ["v1_25"] }
 futures = "~0.3"
 serde = "~1.0"
 serde_json = "~1.0"
@@ -30,6 +36,8 @@ clap = { version = "3.1.18", features = ["derive"] }
 openssl = { version = "0.10", features = ["vendored"] }
 openssl-src = "300.0.6"
 chrono={version = "0.4.22", default-features = false, features = ["clock"]}
+reqwest= {version = "0.11.9", features= ["multipart", "json"]}
+csv="1.1.6"
 
 [dev-dependencies]
 anyhow="1.0"

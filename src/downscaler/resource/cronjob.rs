@@ -1,6 +1,6 @@
 use crate::controller::common::UpscaleMachinery;
-use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources};
-use crate::util::Error;
+use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources, ScaledResources};
+use crate::error::Error;
 use async_trait::async_trait;
 use k8s_openapi::api::batch::v1::CronJob;
 use kube::api::{Patch, PatchParams};
@@ -29,25 +29,30 @@ impl JMSExpression for CronJob {}
 
 #[async_trait]
 impl<'a> Res for CJob<'a> {
-    async fn downscale(&self, c: Client) -> Result<(), Error> {
+    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<CronJob> = Api::all(c.clone());
         let list = api.list(&Default::default()).await.unwrap();
+        let mut list_cron: Vec<ScaledResources> = vec![];
         // TODO: Multiple threads
         for item in list.items {
             let result = item.parse(self.expression).await?;
             if result {
+                let name = item.metadata.name.unwrap();
+                let namespace: String = item.metadata.namespace.unwrap();
                 let pat = ScalingMachinery {
                     tobe_replicas: None,                // doesn't apply to cronjob
                     original_replicas: "0".to_string(), // doesn't apply to cronjob
-                    name: item.metadata.name.unwrap(),
-                    namespace: item.metadata.namespace.unwrap(),
+                    name,
+                    namespace,
                     annotations: item.metadata.annotations,
                     resource_type: Resources::CronJob,
                 };
-                pat.scaling_machinery(c.clone(), self.is_uptime).await?;
+                if let Some(scaled_res) = pat.scaling_machinery(c.clone(), self.is_uptime).await? {
+                    list_cron.push(scaled_res);
+                }
             }
         }
-        Ok(())
+        Ok(list_cron)
     }
 }
 
@@ -65,8 +70,9 @@ impl ResourceExtension for Api<CronJob> {
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<ScaledResources>, Error> {
         let list = self.list(&Default::default()).await?;
+        let mut list_cron: Vec<ScaledResources> = vec![];
         for item in list.items {
             let name = item.metadata.name.unwrap();
             let namespace = item.metadata.namespace.unwrap();
@@ -82,9 +88,11 @@ impl ResourceExtension for Api<CronJob> {
                 annotations: item.metadata.annotations,
                 resource_type: Resources::CronJob,
             };
-            pat.scaling_machinery(c.clone(), is_uptime).await?;
+            if let Some(scaled_res) = pat.scaling_machinery(c.clone(), is_uptime).await? {
+                list_cron.push(scaled_res);
+            }
         }
-        Ok(())
+        Ok(list_cron)
     }
 
     async fn controller_upscale_resource_items(

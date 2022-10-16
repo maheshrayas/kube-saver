@@ -11,4 +11,4 @@
 |[rules-downtime-aftermidnight](rules-downtime-aftermidnight.yaml)| * If the resources are used in offset timezone and you want resouces to UP between 7AM-2AM(next day). This rule makes sure you have resouces scaledown from 2AM to 7AM and from Sat 2 AM to Monday 7AM.|
 |[rules-up-all-weekdays](rules-up-all-weekdays.yaml)| * If the resources want to be up 24x5 (mon-fri). This rule will scale down resources from Saturday 12AM to Sunday 23:59.|
 
-Refer to Unit [Testcase](../src/time_check.rs) for more details and supported rules.
+Refer to Unit [Testcase](../src/utils/time_check.rs) for more details and supported rules.

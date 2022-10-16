@@ -1,41 +1,77 @@
+use crate::csv::generate_csv;
 use crate::downscaler::resource::{
     cronjob::CJob, deployment::Deploy, hpa::Hpa, namespace::Nspace, statefulset::StateSet,
 };
 use crate::downscaler::{Res, Resources, Rule, Rules};
+use crate::error::Error;
+use crate::parser::{check_input_resource, Args, CommType};
+use crate::slack::Slack;
 use crate::time_check::is_uptime;
-use crate::util::{check_input_resource, Error};
 use core::time;
 use kube::Client;
 use log::{debug, error, info};
 use regex::Regex;
 use std::fs::File;
 
-#[cfg(not(tarpaulin_include))]
-pub async fn processor(interval: u64, rules: &str) -> Result<(), Error> {
-    let interval_millis = time::Duration::from_millis(interval * 1000);
-    let f = File::open(rules).unwrap();
-    let r: Rules = serde_yaml::from_reader(f).unwrap();
-    let client = Client::try_default().await?;
-    info!(
-        "Confgured to look for resource at the interval of {} secs",
-        interval_millis.as_secs()
-    );
-    loop {
-        let ret = r.process_rules(client.clone()).await;
-        match ret {
-            Ok(a) => a,
-            Err(e) => {
-                // dont break the loop/process, just report the error to stdout
-                error!("Error: {}", e);
-            }
-        };
+#[derive(Clone)]
+pub struct Process {
+    interval: u64,
+    rules: String,
+    comm_type: Option<CommType>,
+    comm_detail: Option<String>,
+}
 
-        tokio::time::sleep(interval_millis).await;
+impl From<Args> for Process {
+    fn from(k: Args) -> Self {
+        Self {
+            interval: k.interval,
+            rules: k.rules,
+            comm_type: k.comm_type,
+            comm_detail: k.comm_details,
+        }
     }
 }
 
+impl Process {
+    #[cfg(not(tarpaulin_include))]
+    pub async fn processor(&self) -> Result<(), Error> {
+        let interval_millis = time::Duration::from_millis(self.interval * 1000);
+        let f = File::open(&self.rules).unwrap();
+        let r: Rules = serde_yaml::from_reader(f).unwrap();
+        let client = Client::try_default().await?;
+        info!(
+            "Confgured to look for resource at the interval of {} secs",
+            interval_millis.as_secs()
+        );
+        loop {
+            let ret = r
+                .process_rules(
+                    client.clone(),
+                    self.comm_type.clone(),
+                    self.comm_detail.clone(),
+                )
+                .await;
+
+            match ret {
+                Ok(a) => a,
+                Err(e) => {
+                    // dont break the loop/process, just report the error to stdout
+                    error!("Error: {}", e.to_string());
+                }
+            };
+            tokio::time::sleep(interval_millis).await;
+        }
+    }
+}
+
+#[allow(unused_variables)]
 impl Rules {
-    pub async fn process_rules(&self, client: Client) -> Result<(), Error> {
+    pub async fn process_rules(
+        &self,
+        client: Client,
+        comm_type: Option<CommType>,
+        comm_detail: Option<String>,
+    ) -> Result<(), Error> {
         for e in &self.rules {
             debug!(
                 "Checking if the current timestamp is in the uptime slot {} for the rule id {}",
@@ -57,7 +93,8 @@ impl Rules {
                 let f = check_input_resource(r);
                 if f.is_some() {
                     info!("Processing rule {} for {}", e.id, r);
-                    match f.unwrap() {
+
+                    let resoure_list = match f.unwrap() {
                         Resources::Hpa => {
                             let h = Hpa::new(&e.jmespath, e.replicas, is_uptime);
                             h.downscale(client.clone()).await?
@@ -79,6 +116,32 @@ impl Rules {
                             c.downscale(client.clone()).await?
                         }
                     };
+                    // Send the alert only if resources are scaled down or upped
+                    if !resoure_list.is_empty() {
+                        if let Some(ref comm) = comm_type {
+                            match comm {
+                                CommType::Slack => {
+                                    // if channel is defined in rules only
+                                    if let Some(ref channel) = e.slack_channel {
+                                        generate_csv(&resoure_list, &e.id)?;
+                                        let slack_channel = &e.slack_channel;
+                                        let token = comm.get_secret().unwrap();
+                                        let comment = slack_alert_initial_comment(&e.id, true);
+
+                                        let s = Slack::new(
+                                            &comment,
+                                            channel,
+                                            &e.id,
+                                            "KubeSaverAlert.csv",
+                                            comm_detail.as_ref().unwrap(),
+                                            &token,
+                                        );
+                                        s.send_slack_msg().await?
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -103,6 +166,30 @@ impl Rule {
         };
         m
     }
+}
+
+fn slack_alert_initial_comment(id: &str, up_time: bool) -> String {
+    let mut event = "Down";
+    if up_time {
+        event = "Up";
+    }
+    format!("Scaling {} event completed for rule id {}", event, &id)
+}
+
+#[test]
+fn validate_up_slack_alert_initial_comment() {
+    assert_eq!(
+        slack_alert_initial_comment("scaledown-kube-id", true),
+        "Scaling Up event completed for rule id scaledown-kube-id"
+    )
+}
+
+#[test]
+fn validate_down_slack_alert_initial_comment() {
+    assert_eq!(
+        slack_alert_initial_comment("scaledown-kube-id", false),
+        "Scaling Down event completed for rule id scaledown-kube-id"
+    )
 }
 
 #[test]

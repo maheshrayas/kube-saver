@@ -14,11 +14,11 @@ use std::fs::File;
 async fn test6_check_if_upscales() -> Result<()> {
     // First downscale all the resources with specific jmespath
     let f = File::open("tests/rules/rules13.yaml").unwrap();
-    let r: kube_saver::downscaler::Rules = serde_yaml::from_reader(f).unwrap();
+    let r: saver::downscaler::Rules = serde_yaml::from_reader(f).unwrap();
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone()).await.ok();
+    r.process_rules(client.clone(), None, None).await.ok();
 
     let cj: Api<CronJob> = Api::namespaced(client.clone(), "kuber13");
     let deploy: Api<Deployment> = Api::namespaced(client.clone(), "kuber13");
@@ -46,7 +46,7 @@ async fn test6_check_if_upscales() -> Result<()> {
 
     // kubectl apply the upscale to scale with the condition that was used to scale down
     // "metadata.labels.env =='sit' && metadata.labels.version !='v2'"
-    crate::cluster::util::kubectl_appy("tests/upscaler/upscaler-scaleup13.yaml")
+    crate::integration::util::kubectl_appy("tests/upscaler/upscaler-scaleup13.yaml")
         .await
         .ok();
     // sleep for 10 sec so that controller can update the replicas

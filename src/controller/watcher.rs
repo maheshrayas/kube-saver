@@ -1,5 +1,6 @@
 use crate::controller::{finalizer, upscaler, Upscaler};
-use crate::util::{ContextData, Error};
+use crate::error::Error;
+use crate::parser::ContextData;
 use kube::{Resource, ResourceExt};
 use kube_runtime::controller::Action;
 use log::error;
@@ -12,7 +13,7 @@ enum Value {
 }
 
 #[cfg(not(tarpaulin_include))]
-pub fn on_error(error: &Error, _context: Arc<ContextData>) -> Action {
+pub fn on_error(_object: Arc<Upscaler>, error: &Error, _context: Arc<ContextData>) -> Action {
     error!("Reconciliation error:\n{:?}", error);
     Action::requeue(Duration::from_secs(5))
 }
@@ -31,7 +32,7 @@ pub async fn reconcile(
 ) -> Result<Action, Error> {
     use kube::{api::DeleteParams, Api, Client};
 
-    use crate::{downscaler::Resources, util::check_input_resource};
+    use crate::{downscaler::Resources, parser::check_input_resource};
 
     let client: Client = context.client.clone();
     let namespace: String = match upscaler.namespace() {

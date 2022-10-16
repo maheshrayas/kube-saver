@@ -1,3 +1,4 @@
+# slack token as a file
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,6 +24,8 @@ spec:
             - "--rules=/config/rules.yaml" #rules for downscale
             - "--interval=60" # every 60 secs, the controller will check the resources to downscale or upscale
             - "--debug" # remove to set log as INFO
+            - "--comm-type=slack" # notification type is slack, pass this arg if you want notified to slack
+            - "--comm-details=<slackworkspace>" # slack workspace name, pass this arg if comm-type is set to slack
           resources:
             limits:
               cpu: "1"
@@ -36,7 +39,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false # Create tmp file for slack notification
             runAsGroup: 1001
             runAsNonRoot: true
             runAsUser: 1001
@@ -45,7 +48,18 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /config
+            - name: slack-api-token
+              mountPath: "/var/slack_token"
+              readOnly: true
+            - mountPath: /tmp
+              name: tmp-volume
       volumes:
+        - name: tmp-volume
+          emptyDir: {}
         - name: config-volume
           configMap:
             name: rules
+        - name: slack-api-token
+          secret:
+            secretName: slack-token
+            optional: false # default setting; "slack-token" must exist

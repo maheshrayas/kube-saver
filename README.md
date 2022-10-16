@@ -18,7 +18,7 @@ during non-business hours and save $$, but if you need to scale back the resourc
 * Install CRD
 
     ```bash
-    kubectl apply -f k8s/crds/crd.yaml
+    kubectl apply -f https://raw.githubusercontent.com/maheshrayas/kube-saver/main/k8s/crds/crd.yaml
     ```
 
 * Configure your rules in [rules.yaml](k8s/rules.yaml)

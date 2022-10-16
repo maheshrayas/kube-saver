@@ -126,7 +126,7 @@ impl Rules {
                                         generate_csv(&resoure_list, &e.id)?;
                                         let slack_channel = &e.slack_channel;
                                         let token = comm.get_secret().unwrap();
-                                        let comment = slack_alert_initial_comment(&e.id, true);
+                                        let comment = slack_alert_initial_comment(&e.id, is_uptime);
 
                                         let s = Slack::new(
                                             &comment,

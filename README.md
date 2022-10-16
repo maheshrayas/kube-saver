@@ -4,9 +4,9 @@
 <div align="center">
   <a href="https://github.com/maheshrayas/kube-saver/actions/workflows/ci.yaml" alt="Build"><img src="https://github.com/maheshrayas/kube-saver/actions/workflows/ci.yaml/badge.svg" /></a>
   <a href="https://github.com/maheshrayas/kube-saver/actions/workflows/integration.yaml" alt="integrations"><img src="https://github.com/maheshrayas/kube-saver/actions/workflows/integration.yaml/badge.svg" /></a>
-    <a href="https://codecov.io/gh/maheshrayas/kube-saver" alt="Lint"><img src="https://codecov.io/gh/maheshrayas/kube-saver/branch/main/graph/badge.svg?token=A44LLJERHG" /></a>
-
-   </div>
+  <a href="https://codecov.io/gh/maheshrayas/kube-saver" alt="Lint"><img src="https://codecov.io/gh/maheshrayas/kube-saver/branch/main/graph/badge.svg?token=A44LLJERHG" /></a>
+  <a href="https://kubesaver.com" alt="docs"><img src="https://img.shields.io/badge/Documentation-blue.svg" /></a>
+</div>
 
 ## Motivation
 

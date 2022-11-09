@@ -29,7 +29,7 @@ async fn main() {
     let p: Process = cli_parser.into();
     let downscaler = p.processor();
     tokio::select! {
-        _ = controller => error!("controlled failed"),
+        _ = controller => error!("controller failed"),
        _ = downscaler => error!("downscaler exited"),
     }
 }

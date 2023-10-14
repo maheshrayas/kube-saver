@@ -25,7 +25,7 @@ pub struct Args {
     #[clap(short, long, default_value = "/config/rules.yaml")]
     pub rules: String,
     /// supply --debug to print the debug information
-    #[clap(short, long, parse(from_occurrences))]
+    #[arg(short, long, action = clap::ArgAction::Count)]
     debug: usize,
     /// supply --comm_type=slack  to print the debug information
     #[clap(long, value_enum)]

@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources, ScaledResources};
 use crate::error::Error;
+use crate::ScaleState;
 use async_trait::async_trait;
 use k8s_openapi::api::batch::v1::CronJob;
 use kube::api::{Patch, PatchParams};
@@ -29,7 +32,11 @@ impl JMSExpression for CronJob {}
 
 #[async_trait]
 impl<'a> Res for CJob<'a> {
-    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
+    async fn downscale(
+        &self,
+        c: Client,
+        scale_state: Arc<ScaleState>,
+    ) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<CronJob> = Api::all(c.clone());
         let list = api.list(&Default::default()).await.unwrap();
         let mut list_cron: Vec<ScaledResources> = vec![];
@@ -46,6 +53,7 @@ impl<'a> Res for CJob<'a> {
                     namespace,
                     annotations: item.metadata.annotations,
                     resource_type: Resources::CronJob,
+                    scale_state: Arc::clone(&scale_state),
                 };
                 if let Some(scaled_res) = pat.scaling_machinery(c.clone(), self.is_uptime).await? {
                     list_cron.push(scaled_res);
@@ -70,6 +78,7 @@ impl ResourceExtension for Api<CronJob> {
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
+        scale_state: Arc<ScaleState>,
     ) -> Result<Vec<ScaledResources>, Error> {
         let list = self.list(&Default::default()).await?;
         let mut list_cron: Vec<ScaledResources> = vec![];
@@ -87,6 +96,7 @@ impl ResourceExtension for Api<CronJob> {
                 namespace,
                 annotations: item.metadata.annotations,
                 resource_type: Resources::CronJob,
+                scale_state: Arc::clone(&scale_state),
             };
             if let Some(scaled_res) = pat.scaling_machinery(c.clone(), is_uptime).await? {
                 list_cron.push(scaled_res);

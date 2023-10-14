@@ -2,9 +2,17 @@ use async_trait::async_trait;
 use kube::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use crate::error::Error;
+
+#[derive(Clone)]
+pub struct ScaleState {
+    pub(crate) scaledown_succcess_counter: prometheus::IntCounter,
+    pub(crate) scaleup_succcess_counter: prometheus::IntCounter,
+    pub(crate) scaleup_error_counter: prometheus::IntCounter,
+    pub(crate) scaledown_error_counter: prometheus::IntCounter,
+}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub(crate) struct Rule {
@@ -44,7 +52,8 @@ pub trait JMSExpression {
 
 #[async_trait]
 pub trait Res {
-    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error>;
+    async fn downscale(&self, c: Client, s: Arc<ScaleState>)
+        -> Result<Vec<ScaledResources>, Error>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -65,6 +74,7 @@ pub trait ResourceExtension: Send + Sync {
         replicas: Option<i32>,
         client: Client,
         is_uptime: bool,
+        scale_state: Arc<ScaleState>,
     ) -> Result<Vec<ScaledResources>, Error>;
     // method is implmented by Upscaler controller/operator
     async fn controller_upscale_resource_items(

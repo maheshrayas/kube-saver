@@ -32,13 +32,14 @@ jmespath =  { version = "0.3.0", features = ["sync"] }
 regex = "1.5.5"
 chrono-tz = "0.8.3"
 async-trait = "0.1.53"
-env_logger = "0.10.0"
+tracing = "0.1.37"
 clap = { version = "4.4.0", features = ["derive"] }
 openssl = { version = "0.10", features = ["vendored"] }
 openssl-src = "300.0.6"
 chrono={version = "0.4.22", default-features = false, features = ["clock"]}
 reqwest= {version = "0.11.9", features= ["multipart", "json"]}
 csv="1.1.6"
+tracing-subscriber = { version = "0.3.12", features = ["json", "env-filter"] }
 prometheus = "0.13.3"
 
 [dev-dependencies]

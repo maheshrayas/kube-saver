@@ -14,6 +14,12 @@ pub struct ScaleState {
     pub(crate) scaledown_error_counter: prometheus::IntCounter,
 }
 
+impl Default for ScaleState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub(crate) struct Rule {
     pub(crate) id: String,

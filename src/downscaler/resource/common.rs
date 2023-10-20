@@ -5,12 +5,12 @@ use std::{collections::BTreeMap, str::FromStr, sync::Arc};
 
 use crate::{
     downscaler::{Resources, ScaledResources},
-    error,
     parser::dynamic_resource_type,
     ScaleState,
 };
 
 use crate::error::Error;
+use tracing::error;
 
 pub struct ScalingMachinery {
     pub(crate) tobe_replicas: Option<i32>,
@@ -137,28 +137,25 @@ impl ScalingMachinery {
 
         let rs = dynamic_resource_type(client, &self.namespace, self.resource_type);
         //TODO: Error handling
-        _ = match rs {
-            Some(rs) => {
-                if let Err(e) = rs.patch_resource(&self.name, &patch_object).await {
-                    //error!("failed to patch resource {}, {}",self.resource_type ,e);
-                    metrics_incrementer(
-                        (
-                            ScaleType::from_str(is_downscale).unwrap(),
-                            ScaleStatus::Failed,
-                        ),
-                        scaled_state,
-                    )
-                } else {
-                    metrics_incrementer(
-                        (
-                            ScaleType::from_str(is_downscale).unwrap(),
-                            ScaleStatus::Success,
-                        ),
-                        scaled_state,
-                    )
-                }
+        if let Some(rs) = rs {
+            if let Err(e) = rs.patch_resource(&self.name, &patch_object).await {
+                error!("failed to patch resource {}, {}", self.resource_type, e);
+                metrics_incrementer(
+                    (
+                        ScaleType::from_str(is_downscale).unwrap(),
+                        ScaleStatus::Failed,
+                    ),
+                    scaled_state,
+                )
+            } else {
+                metrics_incrementer(
+                    (
+                        ScaleType::from_str(is_downscale).unwrap(),
+                        ScaleStatus::Success,
+                    ),
+                    scaled_state,
+                )
             }
-            None => (),
         };
         Ok(ScaledResources {
             name: self.name.to_owned(),
@@ -195,9 +192,9 @@ impl FromStr for ScaleType {
         } else if s.eq("false") {
             Ok(ScaleType::ScaleUp)
         } else {
-            Err(Error::UserInputError(format!(
-                "Scale type must be either true or false"
-            )))
+            Err(Error::UserInputError(
+                "Scale type must be either true or false".to_string(),
+            ))
         }
     }
 }

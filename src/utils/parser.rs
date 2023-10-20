@@ -1,14 +1,12 @@
-use chrono::Local;
 use clap::Parser;
 use clap::{error::ErrorKind, CommandFactory};
-use env_logger::Env;
 use k8s_openapi::api::{
     apps::v1::Deployment, apps::v1::StatefulSet, autoscaling::v1::HorizontalPodAutoscaler,
     batch::v1::CronJob,
 };
 use kube::{Api, Client};
 use log::{error, info};
-use std::{env, fs, io::Write, path::Path, str::FromStr};
+use std::{env, fs, path::Path, str::FromStr};
 
 use crate::error::Error;
 use crate::{ResourceExtension, Resources};
@@ -26,7 +24,7 @@ pub struct Args {
     pub rules: String,
     /// supply --debug to print the debug information
     #[arg(short, long, action = clap::ArgAction::Count)]
-    debug: usize,
+    debug: u8,
     /// supply --comm_type=slack  to print the debug information
     #[clap(long, value_enum)]
     pub comm_type: Option<CommType>,
@@ -87,17 +85,15 @@ impl FromStr for CommType {
 }
 
 pub fn init_logger() {
-    let env = Env::default().filter("RUST_LOG");
-    env_logger::Builder::from_env(env)
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} {}: {}",
-                Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                record.level(),
-                record.args()
-            )
-        })
+    // check the rust log
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info")
+    }
+
+    // Initialize the logger
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 }
 

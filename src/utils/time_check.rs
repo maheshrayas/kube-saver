@@ -1,8 +1,9 @@
-use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, TimeZone, Timelike, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, TimeZone, Timelike, Utc, LocalResult};
 use chrono_tz::Tz;
 use log::{debug, info};
 use regex::Captures;
 use std::{process::exit, str::FromStr};
+use tracing::error;
 
 use crate::error::Error;
 
@@ -60,27 +61,30 @@ struct UpTimeCheck {
 }
 
 impl UpTimeCheck {
-    fn is_uptime(&self) -> bool {
+    fn is_uptime(&self) -> Result<bool, Error> {
         // this is hack to check if end time > 12:00 AM and complx hack for downscaling.
         // For example start time Mon 7AM  - 2 AM
-        let complex_high_time = Utc
-            .ymd(2020, 1, 1)
-            .and_hms(self.high_hour, self.high_min, 0);
-        let complex_low_time = Utc.ymd(2020, 1, 1).and_hms(self.low_hour, self.low_min, 0);
-
+        let complex_high_time = if let LocalResult::None = Utc
+            .with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0) {
+                error!("Invalid time {}:{}",self.high_hour,self.high_min);
+               return  Err(Error::UserInputError("Invalid time".to_string()))
+            }else{
+                Utc
+                .with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0).unwrap()
+            };
+    
+            let complex_low_time = if let LocalResult::None = Utc
+            .with_ymd_and_hms(2020, 1, 1, self.low_hour, self.low_min, 0) {
+                error!("Invalid time {}:{}",self.low_hour,self.low_min);
+               return  Err(Error::UserInputError("Invalid time".to_string()))
+            }else{
+                Utc
+                .with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0).unwrap()
+            };
         // current datetime which is updated as per conditions
-        let mut config_date_low_hour = NaiveDate::from_ymd(
-            self.dt.year(),
-            self.dt.month(),
-            self.dt.day(),
-        )
-        .and_hms_milli(self.low_hour, self.low_min, 0, 0);
-        let mut config_date_high_hour = NaiveDate::from_ymd(
-            self.dt.year(),
-            self.dt.month(),
-            self.dt.day(),
-        )
-        .and_hms_milli(self.high_hour, self.high_min, 0, 0);
+        let mut config_date_low_hour = self.get_hms(self.low_hour, self.low_min, self.dt.day())?;
+        let mut config_date_high_hour =
+            self.get_hms(self.high_hour, self.high_min, self.dt.day())?;
 
         // check if the current day is configured in the input week range
         if self.dt.weekday().num_days_from_monday() >= self.week_start
@@ -99,28 +103,27 @@ impl UpTimeCheck {
                 config_date_low_hour,
                 config_date_high_hour,
             };
-            t.cmp_time()
+            Ok(t.cmp_time())
         } else if complex_high_time < complex_low_time {
             info!("current rule is for rules whose end time is extending midnight");
             // check if current day has passed the end day of rule
             // for example RULE = Mon-Fri 7AM - 01AM, and its sat 01:10 AM
             if self.dt.weekday().num_days_from_monday() == self.week_end + 1 {
                 config_date_low_hour =
-                    NaiveDate::from_ymd(self.dt.year(), self.dt.month(), self.dt.day() - 1)
-                        .and_hms_milli(self.low_hour, self.low_min, 0, 0);
+                    self.get_hms(self.low_hour, self.low_min, self.dt.day() - 1)?;
                 let t = Timer {
                     dt: self.dt,
                     config_date_low_hour,
                     config_date_high_hour,
                 };
-                return t.cmp_time();
+                return Ok(t.cmp_time());
             }
             // for example RULE = Mon-Fri 7 - 02 AM, and its Mon 1 AM
             else if self.dt.weekday().num_days_from_monday() == self.week_start
                 && self.dt.hour() < complex_high_time.hour()
             {
                 // downscaling
-                return false;
+                return Ok(false);
             } else if self.dt.weekday().num_days_from_monday() >= self.week_start
                 && self.dt.weekday().num_days_from_monday() <= self.week_end
             {
@@ -128,35 +131,49 @@ impl UpTimeCheck {
                 if self.dt.hour() <= complex_high_time.hour() {
                     //below condition is needed if minutes are involved, for example scale down is 2:30 AM
                     config_date_low_hour =
-                        NaiveDate::from_ymd(self.dt.year(), self.dt.month(), self.dt.day() - 1)
-                            .and_hms_milli(self.low_hour, self.low_min, 0, 0);
+                        self.get_hms(self.low_hour, self.low_min, self.dt.day() - 1)?;
                     let t = Timer {
                         dt: self.dt,
                         config_date_low_hour,
                         config_date_high_hour,
                     };
-                    return t.cmp_time();
+                    return Ok(t.cmp_time());
                 }
                 // if current time is less 12 AM but greater than low hour
                 else if self.dt.hour() >= complex_low_time.hour() {
                     // below is needed if there are minutes involved, for example start time is 7:30 AM
                     config_date_high_hour =
-                        NaiveDate::from_ymd(self.dt.year(), self.dt.month(), self.dt.day() + 1)
-                            .and_hms_milli(self.high_hour, self.high_min, 0, 0);
+                        self.get_hms(self.high_hour, self.high_min, self.dt.day() + 1)?;
                     let t = Timer {
                         dt: self.dt,
                         config_date_low_hour,
                         config_date_high_hour,
                     };
-                    return t.cmp_time();
+                    return Ok(t.cmp_time());
                 }
             }
-            false
+            Ok(false)
         } else {
             // current day is not configured in the uptime
             debug!("current day is not configured in the uptime,hence downscaling");
-            false
+            Ok(false)
         }
+    }
+
+    // typ = 0 no Change
+    // typ = 1 Add 1
+    // typ = -1 Min 1
+    fn get_hms(&self, hr: u32, min: u32, day: u32) -> Result<NaiveDateTime, Error> {
+        if let Some(ddd) = NaiveDate::from_ymd_opt(self.dt.year(), self.dt.month(), day) {
+            if let Some(hms) = ddd.and_hms_milli_opt(hr, min, 0, 0) {
+                return Ok(hms);
+            } else {
+                error!("invalid  time{}:{}", hr, min);
+            }
+        } else {
+            error!("invalid date {}/{}/{}", self.dt.year(),self.dt.month(),day)
+        }
+        Err(Error::UserInputError("Invalid datetime".to_string()))
     }
 }
 
@@ -181,7 +198,7 @@ pub fn is_uptime(m: Captures) -> Result<bool, Error> {
         high_min,
         dt,
     };
-    Ok(upt_chk.is_uptime())
+    upt_chk.is_uptime()
 }
 
 #[cfg(test)]
@@ -245,32 +262,32 @@ mod timecheck_unit_test {
         // Expected : Resources should be UP
         let mut cdt = CurrentDateTime::new(2022, 08, 29, 01, 00, 00);
         let mut u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(),true);
         // Datetime: 30-Aug-2022 Day: Tuesday Time:03 AM
         // Expected : Resources should be UP
         cdt = CurrentDateTime::new(2022, 08, 30, 03, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 02-Sep-2022 Day: Friday Time: 23:59 PM
         // Expected : Resources should be UP
         cdt = CurrentDateTime::new(2022, 09, 02, 23, 59, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 03-Sep-2022 Day: Saturday Time: 00:00 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 03, 00, 01, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 04-Sep-2022 Day: Sunday Time: 09:00 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 04, 09, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 04-Sep-2022 Day: Sunday Time: 09:00 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 04, 09, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
     }
 
     #[test]
@@ -287,47 +304,47 @@ mod timecheck_unit_test {
         // Expected : Resources should be UP
         let mut cdt = CurrentDateTime::new(2022, 09, 05, 07, 01, 00);
         let mut u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Date: 06-Sep-2022 Day: Tuesday Time:01:00 AM
         // Expected : Resources should be UP
-        cdt = CurrentDateTime::new(2022, 09, 06, 01, 00, 00);
+        cdt = CurrentDateTime::new(2022, 09, 06, 91, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 09-Sep-2022 Day: Friday Time: 23:59 PM
         // Expected : Resources should be UP
         cdt = CurrentDateTime::new(2022, 09, 09, 23, 59, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 10-Sep-2022 Day: Saturday Time: 01:59 AM
         // Expected : Resources should be UP
         cdt = CurrentDateTime::new(2022, 09, 10, 01, 59, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 10-Sep-2022 Day: Saturday Time: 02:01 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 10, 02, 01, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 10-Sep-2022 Day: Saturday Time: 09:00 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 10, 09, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 11-Sep-2022 Day: Sunday Time: 09:00 PM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 11, 21, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 12-Sep-2022 Day: Monday Time: 03:00 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 12, 03, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 12-Sep-2022 Day: Monday Time: 01:00 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 12, 01, 00, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
     }
 
     #[test]
@@ -343,31 +360,31 @@ mod timecheck_unit_test {
         // Expected : Resources should be UP
         let mut cdt = CurrentDateTime::new(2022, 09, 05, 07, 01, 00);
         let mut u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Date: 05-Sep-2022 Day: Monday Time:07:01 PM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 05, 19, 01, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Date: 06-Sep-2022 Day: Tuesday Time:05:00 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 06, 05, 01, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 03-Sep-2022 Day: Friday Time: 07:59 PM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 03, 19, 59, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 10-Sep-2022 Day: Saturday Time: 07:01 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 10, 07, 01, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
         // Datetime: 11-Sep-2022 Day: Sunday Time: 07:01 AM
         // Expected : Resources should be DOWN
         cdt = CurrentDateTime::new(2022, 09, 11, 07, 01, 00);
         u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime(), false);
+        assert_eq!(u.is_uptime().unwrap(), false);
     }
 }

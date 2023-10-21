@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use crate::downscaler::{JMSExpression, Res, ResourceExtension, ScaledResources};
 use crate::error::Error;
+use crate::ScaleState;
 use async_trait::async_trait;
 use k8s_openapi::api::autoscaling::v1::HorizontalPodAutoscaler;
 use k8s_openapi::api::{
@@ -28,10 +31,15 @@ impl JMSExpression for Namespace {}
 
 #[async_trait]
 impl<'a> Res for Nspace<'a> {
-    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
+    async fn downscale(
+        &self,
+        c: Client,
+        s: Arc<ScaleState>,
+    ) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<Namespace> = Api::all(c.clone());
         let namespaces = api.list(&Default::default()).await.unwrap();
         let mut list_namespace: Vec<Vec<ScaledResources>> = vec![];
+
         // TODO: Multiple threads
         for ns in namespaces.items {
             let result = ns.parse(self.expression).await?;
@@ -51,7 +59,12 @@ impl<'a> Res for Nspace<'a> {
                     Api::namespaced(c.clone(), &namespace_name);
                 list_namespace.push(
                     hpa_api
-                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .processor_scale_ns_resource_items(
+                            self.replicas,
+                            c.clone(),
+                            self.is_uptime,
+                            Arc::clone(&s),
+                        )
                         .await?,
                 );
                 debug!(
@@ -61,7 +74,12 @@ impl<'a> Res for Nspace<'a> {
                 let d_api: Api<Deployment> = Api::namespaced(c.clone(), &namespace_name);
                 list_namespace.push(
                     d_api
-                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .processor_scale_ns_resource_items(
+                            self.replicas,
+                            c.clone(),
+                            self.is_uptime,
+                            Arc::clone(&s),
+                        )
                         .await?,
                 );
                 debug!(
@@ -71,7 +89,12 @@ impl<'a> Res for Nspace<'a> {
                 let ss_api: Api<StatefulSet> = Api::namespaced(c.clone(), &namespace_name);
                 list_namespace.push(
                     ss_api
-                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .processor_scale_ns_resource_items(
+                            self.replicas,
+                            c.clone(),
+                            self.is_uptime,
+                            Arc::clone(&s),
+                        )
                         .await?,
                 );
                 debug!(
@@ -81,7 +104,12 @@ impl<'a> Res for Nspace<'a> {
                 let cj_api: Api<CronJob> = Api::namespaced(c.clone(), &namespace_name);
                 list_namespace.push(
                     cj_api
-                        .processor_scale_ns_resource_items(self.replicas, c.clone(), self.is_uptime)
+                        .processor_scale_ns_resource_items(
+                            self.replicas,
+                            c.clone(),
+                            self.is_uptime,
+                            Arc::clone(&s),
+                        )
                         .await?,
                 );
             }

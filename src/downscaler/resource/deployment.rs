@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources, ScaledResources};
 use crate::error::Error;
+use crate::ScaleState;
 use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::Deployment;
 use kube::api::{Patch, PatchParams};
@@ -32,7 +35,11 @@ impl JMSExpression for Deployment {}
 #[async_trait]
 impl<'a> Res for Deploy<'a> {
     //TODO: proper error handling
-    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
+    async fn downscale(
+        &self,
+        c: Client,
+        scale_state: Arc<ScaleState>,
+    ) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<Deployment> = Api::all(c.clone());
         let list = api.list(&Default::default()).await.unwrap();
         let mut list_dep: Vec<ScaledResources> = vec![];
@@ -48,6 +55,7 @@ impl<'a> Res for Deploy<'a> {
                     namespace: item.metadata.namespace.unwrap(),
                     annotations: item.metadata.annotations,
                     resource_type: Resources::Deployment,
+                    scale_state: Arc::clone(&scale_state),
                 };
                 if let Some(scaled_res) = pat.scaling_machinery(c.clone(), self.is_uptime).await? {
                     list_dep.push(scaled_res);
@@ -72,6 +80,7 @@ impl ResourceExtension for Api<Deployment> {
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
+        scale_state: Arc<ScaleState>,
     ) -> Result<Vec<ScaledResources>, Error> {
         let list = self.list(&Default::default()).await?;
         let mut list_dep: Vec<ScaledResources> = vec![];
@@ -90,6 +99,7 @@ impl ResourceExtension for Api<Deployment> {
                 namespace,
                 annotations: item.metadata.annotations,
                 resource_type: Resources::Deployment,
+                scale_state: Arc::clone(&scale_state),
             };
             if let Some(scaled_res) = pat.scaling_machinery(c.clone(), is_uptime).await? {
                 list_dep.push(scaled_res);

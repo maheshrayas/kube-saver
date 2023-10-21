@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use k8s_openapi::api::apps::v1::StatefulSet;
 use kube::api::{Patch, PatchParams};
@@ -9,6 +11,7 @@ use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::{JMSExpression, ResourceExtension, Resources};
 use crate::downscaler::{Res, ScaledResources};
 use crate::error::Error;
+use crate::ScaleState;
 
 use super::common::ScalingMachinery;
 
@@ -33,7 +36,11 @@ impl JMSExpression for StatefulSet {}
 
 #[async_trait]
 impl Res for StateSet<'_> {
-    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
+    async fn downscale(
+        &self,
+        c: Client,
+        scale_state: Arc<ScaleState>,
+    ) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<StatefulSet> = Api::all(c.clone());
         let ss = api.list(&Default::default()).await.unwrap();
         let mut list_ss: Vec<ScaledResources> = vec![];
@@ -48,6 +55,7 @@ impl Res for StateSet<'_> {
                     namespace: item.metadata.namespace.unwrap(),
                     annotations: item.metadata.annotations,
                     resource_type: Resources::StatefulSet,
+                    scale_state: Arc::clone(&scale_state),
                 };
                 if let Some(scaled_res) = pat.scaling_machinery(c.clone(), self.is_uptime).await? {
                     list_ss.push(scaled_res);
@@ -72,6 +80,7 @@ impl ResourceExtension for Api<StatefulSet> {
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
+        scale_state: Arc<ScaleState>,
     ) -> Result<Vec<ScaledResources>, Error> {
         let list = self.list(&Default::default()).await?;
         let mut list_ss: Vec<ScaledResources> = vec![];
@@ -90,6 +99,7 @@ impl ResourceExtension for Api<StatefulSet> {
                 namespace,
                 annotations: item.metadata.annotations,
                 resource_type: Resources::StatefulSet,
+                scale_state: Arc::clone(&scale_state),
             };
             if let Some(scaled_res) = pat.scaling_machinery(c.clone(), is_uptime).await? {
                 list_ss.push(scaled_res);

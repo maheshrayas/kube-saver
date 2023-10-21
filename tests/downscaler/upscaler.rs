@@ -7,9 +7,13 @@ use saver::controller::upscaler::{
     enable_cronjob, upscale_deploy, upscale_hpa, upscale_ns, upscale_statefulset,
 };
 use saver::downscaler::Rules;
+use saver::ScaleState;
 use std::fs::File;
+use std::sync::Arc;
 
 use kube::{api::Api, Client};
+
+use crate::downscaler::processor::SCALED_STATE;
 
 #[tokio::test]
 async fn test4_apply_upscaler_on_downscaled_for_deployment() {
@@ -18,7 +22,9 @@ async fn test4_apply_upscaler_on_downscaled_for_deployment() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None).await.ok();
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
+        .await
+        .ok();
     // kube-saver must scale down to 0
     let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber4");
     let d = api.get("test-kuber4-deploy1").await.unwrap();
@@ -43,7 +49,9 @@ async fn test5_apply_upscaler_on_downscaled_for_namespace() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None).await.ok();
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
+        .await
+        .ok();
     // kube-saver must scale down to 0
     let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber5");
     let d = api.get("test-kuber5-deploy1").await.unwrap();
@@ -83,7 +91,9 @@ async fn test5_apply_upscaler_on_downscaled_for_statefulset() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None).await.ok();
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
+        .await
+        .ok();
     let api: Api<StatefulSet> = Api::namespaced(client.clone(), "kuber6");
     let d = api.get("test-kuber6-ss2").await.unwrap();
     assert_eq!(d.spec.unwrap().replicas, Some(0));
@@ -101,7 +111,9 @@ async fn test5_apply_upscaler_on_downscaled_for_cj() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None).await.ok();
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
+        .await
+        .ok();
     let api: Api<CronJob> = Api::namespaced(client.clone(), "kuber10");
     let c_api = api.get("test-kuber10-cj1").await.unwrap();
     assert_eq!(c_api.spec.unwrap().suspend.unwrap(), true);
@@ -123,7 +135,9 @@ async fn test5_apply_upscaler_on_downscaled_for_hpa() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None).await.ok();
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
+        .await
+        .ok();
     let api: Api<HorizontalPodAutoscaler> = Api::namespaced(client.clone(), "kuber12b");
     let hpa_api = api.get("test-kuber12b-hpa1").await.unwrap();
     assert_eq!(hpa_api.spec.unwrap().min_replicas, Some(1));

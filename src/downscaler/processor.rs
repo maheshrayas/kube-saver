@@ -7,11 +7,14 @@ use crate::error::Error;
 use crate::parser::{check_input_resource, Args, CommType};
 use crate::slack::Slack;
 use crate::time_check::is_uptime;
+use crate::ScaleState;
 use core::time;
 use kube::Client;
 use log::{debug, error, info};
+use prometheus::register_int_counter;
 use regex::Regex;
 use std::fs::File;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Process {
@@ -32,13 +35,44 @@ impl From<Args> for Process {
     }
 }
 
+impl ScaleState {
+    pub fn new() -> Self {
+        let scaledown_succcess_counter = register_int_counter!(
+            "no_of_resources_scaled_down_success",
+            "Total number of resources scaleddown successfully"
+        )
+        .unwrap();
+        let scaleup_succcess_counter = register_int_counter!(
+            "no_of_resources_scaled_up_success",
+            "Total number of resources scaledup successfully"
+        )
+        .unwrap();
+        let scaleup_error_counter = register_int_counter!(
+            "no_of_resources_scaled_down_error",
+            "Total number of errors during scaleddown"
+        )
+        .unwrap();
+        let scaledown_error_counter = register_int_counter!(
+            "no_of_resources_scaled_up_error",
+            "Total number of errors during scaleup"
+        )
+        .unwrap();
+        ScaleState {
+            scaledown_succcess_counter,
+            scaleup_succcess_counter,
+            scaleup_error_counter,
+            scaledown_error_counter,
+        }
+    }
+}
 impl Process {
     #[cfg(not(tarpaulin_include))]
-    pub async fn processor(&self) -> Result<(), Error> {
+    pub async fn processor(&self, state: Arc<ScaleState>) -> Result<(), Error> {
         let interval_millis = time::Duration::from_millis(self.interval * 1000);
         let f = File::open(&self.rules).unwrap();
         let r: Rules = serde_yaml::from_reader(f).unwrap();
         let client = Client::try_default().await?;
+
         info!(
             "Confgured to look for resource at the interval of {} secs",
             interval_millis.as_secs()
@@ -49,6 +83,7 @@ impl Process {
                     client.clone(),
                     self.comm_type.clone(),
                     self.comm_detail.clone(),
+                    state.clone(),
                 )
                 .await;
 
@@ -71,6 +106,7 @@ impl Rules {
         client: Client,
         comm_type: Option<CommType>,
         comm_detail: Option<String>,
+        state: Arc<ScaleState>,
     ) -> Result<(), Error> {
         for e in &self.rules {
             debug!(
@@ -91,29 +127,30 @@ impl Rules {
             // for each resource in rules.yaml
             for r in &e.resource {
                 let f = check_input_resource(r);
-                if f.is_some() {
+                if let Some(f) = f {
                     info!("Processing rule {} for {}", e.id, r);
+                    let state = Arc::clone(&state);
 
-                    let resoure_list = match f.unwrap() {
+                    let resoure_list = match f {
                         Resources::Hpa => {
                             let h = Hpa::new(&e.jmespath, e.replicas, is_uptime);
-                            h.downscale(client.clone()).await?
+                            h.downscale(client.clone(), state).await?
                         }
                         Resources::Deployment => {
                             let d = Deploy::new(&e.jmespath, e.replicas, is_uptime);
-                            d.downscale(client.clone()).await?
+                            d.downscale(client.clone(), state).await?
                         }
                         Resources::Namespace => {
                             let n = Nspace::new(&e.jmespath, e.replicas, is_uptime);
-                            n.downscale(client.clone()).await?
+                            n.downscale(client.clone(), state).await?
                         }
                         Resources::StatefulSet => {
                             let s = StateSet::new(&e.jmespath, e.replicas, is_uptime);
-                            s.downscale(client.clone()).await?
+                            s.downscale(client.clone(), state).await?
                         }
                         Resources::CronJob => {
                             let c = CJob::new(&e.jmespath, is_uptime);
-                            c.downscale(client.clone()).await?
+                            c.downscale(client.clone(), state).await?
                         }
                     };
                     // Send the alert only if resources are scaled down or upped

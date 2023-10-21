@@ -15,11 +15,12 @@ name = "saver"
 path = "src/lib.rs"
 
 [dependencies]
+actix-web = "4.3.1"
 log = "0.4"
 tokio = { version = "1.18.2", features = ["full"] }
-kube = { version = "0.75.0", features = ["runtime", "derive"] }
-kube-runtime = "0.75.0" # Custom controller support
-k8s-openapi = { version = "0.16.0", features = ["v1_25"] }
+kube = { version = "0.86.0", features = ["runtime", "derive"] }
+kube-runtime = "0.86.0" # Custom controller support
+k8s-openapi = { version = "0.20.0", features = ["v1_25"] }
 futures = "~0.3"
 serde = "~1.0"
 serde_json = "~1.0"
@@ -29,15 +30,18 @@ thiserror = "~1.0" # Custom Error definitions and convenient error mappings
 yaml-rust = "0.4.5"
 jmespath =  { version = "0.3.0", features = ["sync"] }
 regex = "1.5.5"
-chrono-tz = "0.6"
+chrono-tz = "0.8.3"
 async-trait = "0.1.53"
-env_logger = "0.9.0"
-clap = { version = "3.1.18", features = ["derive"] }
+tracing = "0.1.37"
+clap = { version = "4.4.0", features = ["derive"] }
 openssl = { version = "0.10", features = ["vendored"] }
-openssl-src = "300.0.6"
+openssl-src = ">=111.25, <300.0"
 chrono={version = "0.4.22", default-features = false, features = ["clock"]}
 reqwest= {version = "0.11.9", features= ["multipart", "json"]}
 csv="1.1.6"
+tracing-subscriber = { version = "0.3.12", features = ["json", "env-filter"] }
+prometheus = "0.13.3"
 
 [dev-dependencies]
 anyhow="1.0"
+lazy_static = "1.0"

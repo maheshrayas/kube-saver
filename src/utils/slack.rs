@@ -46,14 +46,14 @@ impl<'a> Slack<'a> {
     // TODO validate all inputs using proc macro
     fn validate_slack_params(&self) -> Result<(), Error> {
         // if channel is empty
-        if self.channel.is_empty() {};
+        let _ = self.channel.is_empty();
         // if comment is empty
-        if self.comment.is_empty() {}
+        let _ = self.comment.is_empty();
         // if file_name is empty
-        if self.file_name.is_empty() {}
+        let _ = self.file_name.is_empty();
 
         // if slack_msg_info is empty
-        if self.slack_msg_info.is_empty() {}
+        let _ = self.slack_msg_info.is_empty();
 
         // if slack_org is empty
         if self.slack_org.is_empty() {

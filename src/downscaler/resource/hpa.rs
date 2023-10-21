@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use crate::controller::common::UpscaleMachinery;
 use crate::downscaler::{JMSExpression, Res, ResourceExtension, Resources, ScaledResources};
 use crate::error::Error;
+use crate::ScaleState;
 use async_trait::async_trait;
 use k8s_openapi::api::autoscaling::v1::HorizontalPodAutoscaler;
 use kube::api::{Patch, PatchParams};
@@ -31,7 +34,11 @@ impl<'a> Hpa<'a> {
 
 #[async_trait]
 impl<'a> Res for Hpa<'a> {
-    async fn downscale(&self, c: Client) -> Result<Vec<ScaledResources>, Error> {
+    async fn downscale(
+        &self,
+        c: Client,
+        scale_state: Arc<ScaleState>,
+    ) -> Result<Vec<ScaledResources>, Error> {
         let api: Api<HorizontalPodAutoscaler> = Api::all(c.clone());
         let list = api.list(&Default::default()).await.unwrap();
         let mut list_hpa: Vec<ScaledResources> = vec![];
@@ -58,6 +65,7 @@ impl<'a> Res for Hpa<'a> {
                     namespace,
                     annotations: item.metadata.annotations,
                     resource_type: Resources::Hpa,
+                    scale_state: Arc::clone(&scale_state),
                 };
                 if let Some(scaled_res) = pat.scaling_machinery(c.clone(), self.is_uptime).await? {
                     list_hpa.push(scaled_res);
@@ -81,6 +89,7 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
         replicas: Option<i32>,
         c: Client,
         is_uptime: bool,
+        scale_state: Arc<ScaleState>,
     ) -> Result<Vec<ScaledResources>, Error> {
         let list = self.list(&Default::default()).await?;
         let mut list_hpa: Vec<ScaledResources> = vec![];
@@ -107,6 +116,7 @@ impl ResourceExtension for Api<HorizontalPodAutoscaler> {
                 namespace,
                 annotations: item.metadata.annotations,
                 resource_type: Resources::Hpa,
+                scale_state: Arc::clone(&scale_state),
             };
             if let Some(scaled_res) = pat.scaling_machinery(c.clone(), is_uptime).await? {
                 list_hpa.push(scaled_res);

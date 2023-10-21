@@ -18,7 +18,14 @@ async fn test6_check_if_upscales() -> Result<()> {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None).await.ok();
+    r.process_rules(
+        client.clone(),
+        None,
+        None,
+        std::sync::Arc::new(saver::ScaleState::new()),
+    )
+    .await
+    .ok();
 
     let cj: Api<CronJob> = Api::namespaced(client.clone(), "kuber13");
     let deploy: Api<Deployment> = Api::namespaced(client.clone(), "kuber13");

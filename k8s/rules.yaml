@@ -1,11 +1,11 @@
 rules:
   # scale down deployment with name go-app-deployment-2 when current time/day not in uptime
-  - id: rules-downscale-deployments
-    uptime: Mon-Fri 09:00-17:00 Australia/Sydney
+  - id: rules-downscale-namespace
+    uptime: Mon-Sat 25:00-16:00 Australia/Sydney
     # https://jmespath.org/
-    jmespath: "metadata.name == 'go-app-deployment'"
+    jmespath: "metadata.name == 'kuber1' || metadata.name == 'kuber2' || metadata.name == 'kuber3'|| metadata.name == 'kuber4'"
     resource:
-      - Deployment # type of resource
+      - Namespace # type of resource
     replicas: 0 # either set the replicas:0 or any number during nonuptime
   # scale down all statefulset with name web when current time/day not in uptime
   - id: rules-downscale-statefulset

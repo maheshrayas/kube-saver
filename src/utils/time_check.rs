@@ -80,7 +80,7 @@ impl UpTimeCheck {
             error!("Invalid time {}:{}", self.low_hour, self.low_min);
             return Err(Error::UserInputError("Invalid time".to_string()));
         } else {
-            Utc.with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0)
+            Utc.with_ymd_and_hms(2020, 1, 1, self.low_hour, self.low_min, 0)
                 .unwrap()
         };
         // current datetime which is updated as per conditions
@@ -154,6 +154,7 @@ impl UpTimeCheck {
                     return Ok(t.cmp_time());
                 }
             }
+
             Ok(false)
         } else {
             // current day is not configured in the uptime
@@ -269,6 +270,8 @@ mod timecheck_unit_test {
         // Expected : Resources should be UP
         let mut cdt = CurrentDateTime::new(2022, 08, 29, 01, 00, 00);
         let mut u = cdt.get_data(rule);
+        let z = u.is_uptime();
+        print!("{z:?}");
         assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 30-Aug-2022 Day: Tuesday Time:03 AM
         // Expected : Resources should be UP
@@ -314,7 +317,7 @@ mod timecheck_unit_test {
         assert_eq!(u.is_uptime().unwrap(), true);
         // Date: 06-Sep-2022 Day: Tuesday Time:01:00 AM
         // Expected : Resources should be UP
-        cdt = CurrentDateTime::new(2022, 09, 06, 91, 00, 00);
+        cdt = CurrentDateTime::new(2022, 09, 06, 9, 00, 00);
         u = cdt.get_data(rule);
         assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 09-Sep-2022 Day: Friday Time: 23:59 PM

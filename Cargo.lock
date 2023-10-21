@@ -1295,6 +1295,7 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "kube-runtime",
+ "lazy_static",
  "log",
  "openssl",
  "openssl-src 300.0.9+3.0.5",

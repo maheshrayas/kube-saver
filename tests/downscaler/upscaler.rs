@@ -13,6 +13,8 @@ use std::sync::Arc;
 
 use kube::{api::Api, Client};
 
+use crate::downscaler::processor::SCALED_STATE;
+
 #[tokio::test]
 async fn test4_apply_upscaler_on_downscaled_for_deployment() {
     let f = File::open("tests/rules/rules3.yaml").unwrap();
@@ -20,7 +22,7 @@ async fn test4_apply_upscaler_on_downscaled_for_deployment() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None, Arc::new(ScaleState::new()))
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
         .await
         .ok();
     // kube-saver must scale down to 0
@@ -47,7 +49,7 @@ async fn test5_apply_upscaler_on_downscaled_for_namespace() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None, Arc::new(ScaleState::new()))
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
         .await
         .ok();
     // kube-saver must scale down to 0
@@ -89,7 +91,7 @@ async fn test5_apply_upscaler_on_downscaled_for_statefulset() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None, Arc::new(ScaleState::new()))
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
         .await
         .ok();
     let api: Api<StatefulSet> = Api::namespaced(client.clone(), "kuber6");
@@ -109,7 +111,7 @@ async fn test5_apply_upscaler_on_downscaled_for_cj() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None, Arc::new(ScaleState::new()))
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
         .await
         .ok();
     let api: Api<CronJob> = Api::namespaced(client.clone(), "kuber10");
@@ -133,7 +135,7 @@ async fn test5_apply_upscaler_on_downscaled_for_hpa() {
     let client = Client::try_default()
         .await
         .expect("Failed to read kubeconfig");
-    r.process_rules(client.clone(), None, None, Arc::new(ScaleState::new()))
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
         .await
         .ok();
     let api: Api<HorizontalPodAutoscaler> = Api::namespaced(client.clone(), "kuber12b");

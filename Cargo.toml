@@ -44,3 +44,4 @@ prometheus = "0.13.3"
 
 [dev-dependencies]
 anyhow="1.0"
+lazy_static = "1.0"

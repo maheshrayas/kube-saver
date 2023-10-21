@@ -163,9 +163,6 @@ impl UpTimeCheck {
         }
     }
 
-    // typ = 0 no Change
-    // typ = 1 Add 1
-    // typ = -1 Min 1
     fn get_hms(&self, hr: u32, min: u32, day: u32) -> Result<NaiveDateTime, Error> {
         if let Some(ddd) = NaiveDate::from_ymd_opt(self.dt.year(), self.dt.month(), day) {
             if let Some(hms) = ddd.and_hms_milli_opt(hr, min, 0, 0) {

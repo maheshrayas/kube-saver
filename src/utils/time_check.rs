@@ -1,4 +1,4 @@
-use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, TimeZone, Timelike, Utc, LocalResult};
+use chrono::{DateTime, Datelike, LocalResult, NaiveDate, NaiveDateTime, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 use log::{debug, info};
 use regex::Captures;
@@ -64,23 +64,25 @@ impl UpTimeCheck {
     fn is_uptime(&self) -> Result<bool, Error> {
         // this is hack to check if end time > 12:00 AM and complx hack for downscaling.
         // For example start time Mon 7AM  - 2 AM
-        let complex_high_time = if let LocalResult::None = Utc
-            .with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0) {
-                error!("Invalid time {}:{}",self.high_hour,self.high_min);
-               return  Err(Error::UserInputError("Invalid time".to_string()))
-            }else{
-                Utc
-                .with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0).unwrap()
-            };
-    
-            let complex_low_time = if let LocalResult::None = Utc
-            .with_ymd_and_hms(2020, 1, 1, self.low_hour, self.low_min, 0) {
-                error!("Invalid time {}:{}",self.low_hour,self.low_min);
-               return  Err(Error::UserInputError("Invalid time".to_string()))
-            }else{
-                Utc
-                .with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0).unwrap()
-            };
+        let complex_high_time = if let LocalResult::None =
+            Utc.with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0)
+        {
+            error!("Invalid time {}:{}", self.high_hour, self.high_min);
+            return Err(Error::UserInputError("Invalid time".to_string()));
+        } else {
+            Utc.with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0)
+                .unwrap()
+        };
+
+        let complex_low_time = if let LocalResult::None =
+            Utc.with_ymd_and_hms(2020, 1, 1, self.low_hour, self.low_min, 0)
+        {
+            error!("Invalid time {}:{}", self.low_hour, self.low_min);
+            return Err(Error::UserInputError("Invalid time".to_string()));
+        } else {
+            Utc.with_ymd_and_hms(2020, 1, 1, self.high_hour, self.high_min, 0)
+                .unwrap()
+        };
         // current datetime which is updated as per conditions
         let mut config_date_low_hour = self.get_hms(self.low_hour, self.low_min, self.dt.day())?;
         let mut config_date_high_hour =
@@ -171,7 +173,12 @@ impl UpTimeCheck {
                 error!("invalid  time{}:{}", hr, min);
             }
         } else {
-            error!("invalid date {}/{}/{}", self.dt.year(),self.dt.month(),day)
+            error!(
+                "invalid date {}/{}/{}",
+                self.dt.year(),
+                self.dt.month(),
+                day
+            )
         }
         Err(Error::UserInputError("Invalid datetime".to_string()))
     }
@@ -262,7 +269,7 @@ mod timecheck_unit_test {
         // Expected : Resources should be UP
         let mut cdt = CurrentDateTime::new(2022, 08, 29, 01, 00, 00);
         let mut u = cdt.get_data(rule);
-        assert_eq!(u.is_uptime().unwrap(),true);
+        assert_eq!(u.is_uptime().unwrap(), true);
         // Datetime: 30-Aug-2022 Day: Tuesday Time:03 AM
         // Expected : Resources should be UP
         cdt = CurrentDateTime::new(2022, 08, 30, 03, 00, 00);

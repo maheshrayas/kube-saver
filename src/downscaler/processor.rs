@@ -127,11 +127,11 @@ impl Rules {
             // for each resource in rules.yaml
             for r in &e.resource {
                 let f = check_input_resource(r);
-                if f.is_some() {
+                if let Some(f) = f {
                     info!("Processing rule {} for {}", e.id, r);
                     let state = Arc::clone(&state);
 
-                    let resoure_list = match f.unwrap() {
+                    let resoure_list = match f {
                         Resources::Hpa => {
                             let h = Hpa::new(&e.jmespath, e.replicas, is_uptime);
                             h.downscale(client.clone(), state).await?

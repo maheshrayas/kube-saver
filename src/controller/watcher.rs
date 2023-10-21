@@ -56,8 +56,8 @@ pub async fn reconcile(
                 // for each resources in spec
                 for r in &res.resource {
                     let f = check_input_resource(r);
-                    if f.is_some() {
-                        match f.unwrap() {
+                    if let Some(f) = f {
+                        match f {
                             Resources::Deployment => {
                                 upscaler::upscale_deploy(
                                     client.clone(),
@@ -85,8 +85,8 @@ pub async fn reconcile(
                                 upscaler::upscale_hpa(client.clone(), res.replicas, &res.jmespath)
                                     .await?
                             }
-                        };
-                    }
+                        }
+                    };
                 }
             }
             let api: Api<Upscaler> = Api::namespaced(client, &namespace);

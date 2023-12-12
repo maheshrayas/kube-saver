@@ -5,42 +5,51 @@ metadata:
 spec:
   group: kubesaver.com
   names:
+    categories: []
     kind: Upscaler
     plural: upscalers
+    shortNames: []
     singular: upscaler
-    shortNames:
-      - upscaler
   scope: Namespaced
   versions:
-    - name: v1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          description: Upscale scaled downed resources
-          properties:
-            spec:
-              type: object
-              properties:
-                scale:
-                  items:
-                    type: object
-                    properties:
-                      resource:
-                        type: array
-                        description:
+  - additionalPrinterColumns: []
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: Upscale scaled downed resources
+        properties:
+          spec:
+            properties:
+              scale:
+                items:
+                  properties:
+                    jmespath:
+                      type: string
+                    replicas:
+                      format: int32
+                      nullable: true
+                      type: integer
+                      description: Non mandatory, if not defined, the Controller will upscale to the number of replicas before scaled down replicas
+                    resource:
+                      items:
+                        type: string
+                      type: array
+                      description:
                           Supported resources -  Namespace, Deployment, Statefulset, Cronjob, hpa.
                           if resources is defined as Namespace, the Custom resource will look for Deployment, Statefulset, Cronjob, hpa
                           defined in the jmespath
-                        items:
-                          type: string
-                      replicas:
-                        type: integer
-                        description: Non mandatory, if not defined, the Controller will upscale to the number of replicas before scaled down replicas
-                        format: int32
-                      jmespath:
-                        type: string
-                        description: https://jmespath.org/, use to select the resources based on manifest filter.
-                    required: ["jmespath", "resource"]
-                  type: array
+                  required:
+                  - jmespath
+                  - resource
+                  type: object
+                type: array
+            required:
+            - scale
+            type: object
+        required:
+        - spec
+        title: Upscaler
+        type: object
+    served: true
+    storage: true
+    subresources: {}

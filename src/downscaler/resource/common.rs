@@ -109,12 +109,19 @@ impl ScalingMachinery {
         is_downscale: &str,
         scaled_state: Arc<ScaleState>,
     ) -> Result<ScaledResources, Error> {
+        let mut flux_sync = "enabled";
+        if is_downscale == "true" {
+            flux_sync = "disabled"
+        }
+
         let annotations: Value = json!({
             "annotations": {
                 "kubesaver.com/is_downscaled": is_downscale,
-                "kubesaver.com/original_count": orig_count
+                "kubesaver.com/original_count": orig_count,
+                "kustomize.toolkit.fluxcd.io/reconcile": flux_sync,
             }
         });
+
         let spec = match self.resource_type {
             Resources::Deployment | Resources::Namespace | Resources::StatefulSet => {
                 json!({ "replicas": replicas.unwrap_or(0) })
@@ -130,6 +137,7 @@ impl ScalingMachinery {
                 )
             }
         };
+
         let mut patch = Map::new();
         patch.insert("metadata".to_string(), annotations);
         patch.insert("spec".to_string(), spec);

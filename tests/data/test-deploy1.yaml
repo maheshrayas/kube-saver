@@ -9,7 +9,7 @@ metadata:
   namespace: kuber1
   name: test-kuber1-deploy1
   annotations:
-    kubesaver.com/ignore: true
+    kubesaver.com/ignore: "true"
   labels:
     app: go-app-kuber1
 spec:

@@ -348,3 +348,19 @@ async fn test4_hpa_scale_all_resources_replicas_1() {
     //Deployment must be scaled back to original replicas
     assert_eq!(d.spec.unwrap().replicas, Some(3));
 }
+
+#[tokio::test]
+async fn test5_check_if_ignored() {
+    let f = File::open("tests/rules/rules14.yaml").unwrap();
+    let r: Rules = serde_yaml::from_reader(f).unwrap();
+    let client = Client::try_default()
+        .await
+        .expect("Failed to read kubeconfig");
+    r.process_rules(client.clone(), None, None, SCALED_STATE.clone())
+        .await
+        .ok();
+    // kube-saver must ignore
+    let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber14");
+    let d = api.get("test-kuber14-deploy1").await.unwrap();
+    assert_eq!(d.spec.unwrap().replicas, Some(2));
+}

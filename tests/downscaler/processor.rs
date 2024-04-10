@@ -362,6 +362,5 @@ async fn test5_check_if_ignored() {
     // kube-saver must ignore
     let api: Api<Deployment> = Api::namespaced(client.clone(), "kuber14");
     let d = api.get("test-kuber14-deploy1").await.unwrap();
-    assert_eq!(d.spec.unwrap().replicas, Some(0));
-
+    assert_eq!(d.spec.unwrap().replicas, Some(2));
 }

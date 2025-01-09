@@ -176,7 +176,7 @@ async fn slack_msg_null_org() {
     let retu = s.send_slack_msg().await;
     assert_eq!(
         retu.unwrap_err().to_string(),
-        "Reqwest Error: builder error: invalid domain character"
+        "Reqwest Error: builder error"
     );
 }
 

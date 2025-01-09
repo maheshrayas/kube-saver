@@ -17,7 +17,6 @@ pub struct Nspace<'a> {
     pub(crate) is_uptime: bool,
 }
 
-
 #[allow(clippy::needless_lifetimes)]
 impl<'a> Nspace<'a> {
     pub fn new(expression: &'a str, replicas: Option<i32>, is_uptime: bool) -> Self {

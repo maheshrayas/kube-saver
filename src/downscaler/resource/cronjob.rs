@@ -19,6 +19,7 @@ pub struct CJob<'a> {
     pub(crate) is_uptime: bool,
 }
 
+#[allow(clippy::needless_lifetimes)]
 impl<'a> CJob<'a> {
     pub fn new(expression: &'a str, is_uptime: bool) -> Self {
         CJob {
@@ -31,6 +32,7 @@ impl<'a> CJob<'a> {
 impl JMSExpression for CronJob {}
 
 #[async_trait]
+#[allow(clippy::needless_lifetimes)]
 impl<'a> Res for CJob<'a> {
     async fn downscale(
         &self,

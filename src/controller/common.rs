@@ -16,13 +16,13 @@ pub struct UpscaleMachinery {
 
 impl UpscaleMachinery {
     pub async fn upscale_machinery(&self, c: Client) -> Result<(), Error> {
-        let is_annotated = self
-            .annotations
-            .as_ref()
-            .unwrap()
-            .get("kubesaver.com/is_downscaled");
+        let annotations = self.annotations.as_ref().unwrap();
+        let is_downscaled = annotations.get("kubesaver.com/is_downscaled").is_some();
         // before upscaling always crosscheck if the resource is downscaled by kube-saver
-        if is_annotated.is_some() {
+        if is_downscaled {
+            let is_flux_disabled = annotations
+                .get("kustomize.toolkit.fluxcd.io/reconcile")
+                .is_some();
             let spec = match self.resource_type {
                 Resources::Deployment | Resources::Namespace | Resources::StatefulSet => {
                     let replicas = self
@@ -55,6 +55,16 @@ impl UpscaleMachinery {
             };
             let mut patch = Map::new();
             patch.insert("spec".to_string(), spec);
+            // If "flux" annotation is disabled, remove it
+            if is_flux_disabled {
+                let mut updated_annotations = annotations.clone();
+                updated_annotations.remove("kustomize.toolkit.fluxcd.io/reconcile");
+                patch.insert(
+                    "metadata".to_string(),
+                    json!({ "annotations": updated_annotations }),
+                );
+            }
+
             let patch_object = Value::Object(patch);
 
             let rs = dynamic_resource_type(c, &self.namespace, self.resource_type);

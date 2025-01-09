@@ -24,6 +24,12 @@ pub enum Error {
         source: csv::Error,
     },
 
+    #[error("Chrono Error: {source}")]
+    ChronoError {
+        #[from]
+        source: chrono_tz::ParseError,
+    },
+
     #[error("IO Error: {source}")]
     IOError {
         #[from]

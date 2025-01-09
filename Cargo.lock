@@ -1683,7 +1683,7 @@ dependencies = [
 
 [[package]]
 name = "kube-saver"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "actix-web",
  "anyhow",

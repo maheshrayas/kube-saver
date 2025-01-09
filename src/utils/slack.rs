@@ -212,7 +212,7 @@ async fn slack_msg_token_with_newline_or_invalid() {
     let retu = s.send_slack_msg().await;
     assert_eq!(
         retu.unwrap_err().to_string(),
-        "Reqwest Error: builder error: failed to parse header value"
+        "Reqwest Error: builder error"
     );
 }
 

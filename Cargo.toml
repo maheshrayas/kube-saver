@@ -45,3 +45,6 @@ prometheus = "0.13.3"
 [dev-dependencies]
 anyhow="1.0"
 lazy_static = "1.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(tarpaulin_include)"] }

@@ -22,6 +22,8 @@ pub struct Hpa<'a> {
 
 impl JMSExpression for HorizontalPodAutoscaler {}
 
+
+#[allow(clippy::needless_lifetimes)]
 impl<'a> Hpa<'a> {
     pub fn new(expression: &'a str, replicas: Option<i32>, is_uptime: bool) -> Self {
         Hpa {
@@ -33,6 +35,7 @@ impl<'a> Hpa<'a> {
 }
 
 #[async_trait]
+#[allow(clippy::needless_lifetimes)]
 impl<'a> Res for Hpa<'a> {
     async fn downscale(
         &self,

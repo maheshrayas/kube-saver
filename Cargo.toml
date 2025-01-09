@@ -1,6 +1,6 @@
 [package]
 name = "kube-saver"
-version = "0.8.0"
+version = "0.10.1"
 edition = "2021"
 authors = ["Mahesh Rayas<maheshrayas@gmail.com>"]
 

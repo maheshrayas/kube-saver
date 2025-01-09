@@ -55,18 +55,18 @@ impl UpscaleMachinery {
             };
             let mut patch = Map::new();
             patch.insert("spec".to_string(), spec);
-            // If "flux" annotation is disabled, remove it
+            // If "flux" annotation is disabled, enable it
             if is_flux_disabled {
-                let mut updated_annotations = annotations.clone();
-                updated_annotations.remove("kustomize.toolkit.fluxcd.io/reconcile");
-                patch.insert(
-                    "metadata".to_string(),
-                    json!({ "annotations": updated_annotations }),
-                );
+                let annotations: Value = json!({
+                    "annotations": {
+                        "kustomize.toolkit.fluxcd.io/reconcile": "enabled",
+                    }
+                });
+
+                patch.insert("metadata".to_string(), annotations);
             }
 
             let patch_object = Value::Object(patch);
-
             let rs = dynamic_resource_type(c, &self.namespace, self.resource_type);
             match rs {
                 Some(rs) => rs.patch_resource(&self.name, &patch_object).await,

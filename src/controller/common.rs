@@ -55,11 +55,11 @@ impl UpscaleMachinery {
             };
             let mut patch = Map::new();
             patch.insert("spec".to_string(), spec);
-            // If "flux" annotation is disabled, enable it
+            // If "flux" annotation is disabled, remove it
             if is_flux_disabled {
                 let annotations: Value = json!({
                     "annotations": {
-                        "kustomize.toolkit.fluxcd.io/reconcile": "enabled",
+                        "kustomize.toolkit.fluxcd.io/reconcile": null,
                     }
                 });
 
